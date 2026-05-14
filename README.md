@@ -63,6 +63,32 @@ userlens events.csv --no-open --quiet
 
 See [docs/agent-usage.md](docs/agent-usage.md) for the full agent contract including MCP.
 
+## Live server mode (v2.0)
+
+Watch an events file and serve a live-updating HTML report over HTTP. Rebuilds automatically when the file changes:
+
+```bash
+userlens serve events.csv                  # http://localhost:7891
+userlens serve events.csv --port 9000      # custom port
+userlens serve events.csv --api            # also expose JSON REST endpoints
+userlens serve events.csv --no-open        # don't auto-open browser
+```
+
+**REST API** (with `--api`):
+
+```
+GET  /                    → live HTML report
+GET  /status              → JSON: {users, events, last_built, watching}
+POST /api/list_users      → body: {limit?, sort_by?, filters?}
+POST /api/analyze_user    → body: {user_id}
+POST /api/taxonomy        → body: {}
+POST /api/cohort          → body: {filters?}
+POST /api/find_event      → body: {event_name, min_occurrences?}
+POST /api/export_html     → body: {output, user_ids?, filters?}
+```
+
+This is the integration point for internal tools, Slack bots, or any HTTP-native system — call the endpoints, get structured JSON, optionally trigger `export_html` to generate a report and serve it via a pre-signed URL.
+
 ## MCP server (v2.0)
 
 Query your event data directly from any MCP-compatible AI assistant (Claude Desktop, Cursor, Claude Code):

@@ -249,3 +249,28 @@ def test_export_html_with_filter(tmp_path: Path) -> None:
                               filters=f'{{"user_country": "{first_country}"}}')
     assert "error" not in result
     assert result["users_included"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# test_serve (server module, no actual HTTP)
+# ---------------------------------------------------------------------------
+
+def test_server_state_build(tmp_path: Path) -> None:
+    from userlens.server import _State
+    out = tmp_path / "out.html"
+    state = _State(Path(TINY), out)
+    state.check_and_rebuild()
+    assert out.exists()
+    assert state.users == 3
+    assert state.events == 20
+    assert state.last_built != ""
+    assert state.error == ""
+
+
+def test_server_state_blobs_populated(tmp_path: Path) -> None:
+    from userlens.server import _State
+    out = tmp_path / "out.html"
+    state = _State(Path(TINY), out)
+    state.check_and_rebuild()
+    assert len(state.blobs) == 3
+    assert "schema" in state.meta

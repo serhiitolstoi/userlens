@@ -12,6 +12,7 @@ from userlens.io.reader import ReadError
 from userlens.mcp_server import main_mcp as _main_mcp
 from userlens.pipeline import PipelineOptions, run
 from userlens.schema.sniff import SchemaError
+from userlens.server import serve as _serve
 from userlens.viewer import render
 
 EXIT_OK = 0
@@ -23,13 +24,31 @@ EXIT_EMPTY = 3
 _COMING_SOON: dict[str, str] = {
     "--profile": "v2 (structured JSON output per user)",
     "--user": "v2 (single-user JSON output)",
-    "--serve": "v2 (self-hosted file-watch mode)",
     "--llm-summarize": "v2.1 (LLM narrative generation)",
     "--diff": "v3 (compare two event files)",
     "--redact": "v1.1 (redact named property columns)",
     "--tz": "v1.1 (explicit timezone)",
     "--cohort": "v1.1 (cohort summary tab)",
 }
+
+
+def _build_serve_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="userlens serve",
+        description="Watch an events file and serve a live-updating HTML report.",
+    )
+    parser.add_argument("events_file", type=Path, help="Path to events file.")
+    parser.add_argument("--port", type=int, default=7891, help="HTTP port (default 7891).")
+    parser.add_argument(
+        "--api",
+        action="store_true",
+        help="Also expose JSON REST endpoints at /api/.",
+    )
+    parser.add_argument(
+        "--no-open", action="store_true", help="Don't open browser on start."
+    )
+    parser.add_argument("-o", "--out", default=None, help="HTML output path (default: temp file).")
+    return parser
 
 
 def _build_mcp_parser() -> argparse.ArgumentParser:
@@ -95,6 +114,18 @@ def main(argv: list[str] | None = None) -> int:
     # Intercept `mcp` subcommand before the main parser sees it.
     # This avoids argparse confusing a file path with a subcommand name.
     effective_argv = list(argv) if argv is not None else sys.argv[1:]
+    if effective_argv and effective_argv[0] == "serve":
+        serve_parser = _build_serve_parser()
+        serve_args = serve_parser.parse_args(effective_argv[1:])
+        _serve(
+            events_path=serve_args.events_file,
+            port=serve_args.port,
+            api=serve_args.api,
+            open_browser=not serve_args.no_open,
+            out=Path(serve_args.out) if serve_args.out else None,
+        )
+        return EXIT_OK
+
     if effective_argv and effective_argv[0] == "mcp":
         mcp_parser = _build_mcp_parser()
         mcp_args = mcp_parser.parse_args(effective_argv[1:])

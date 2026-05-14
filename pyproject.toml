@@ -67,6 +67,7 @@ ignore = ["PLR0913", "PLR2004"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["PLR2004", "S101", "E501"]
 "src/userlens/derive/families.py" = ["PLR0912"]
+"src/userlens/cli.py" = ["PLR0911"]
 
 [tool.mypy]
 python_version = "3.10"
