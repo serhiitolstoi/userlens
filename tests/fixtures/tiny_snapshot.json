@@ -1,0 +1,186 @@
+[
+  {
+    "attrs": {},
+    "fc": {
+      "click": 1,
+      "close": 1,
+      "submit": 1,
+      "view": 4
+    },
+    "fs": "2026-04-01 09:00:00",
+    "ls": "2026-04-02 14:15:12",
+    "s": [
+      [
+        "101_s1",
+        "2026-04-01 09:00:00",
+        [
+          [
+            "09:00",
+            "page_viewed",
+            "view"
+          ],
+          [
+            "09:00",
+            "signup_clicked",
+            "click"
+          ],
+          [
+            "09:01",
+            "signup_submitted",
+            "submit"
+          ],
+          [
+            "09:01",
+            "welcome_viewed",
+            "view"
+          ]
+        ]
+      ],
+      [
+        "101_s2",
+        "2026-04-01 11:30:00",
+        [
+          [
+            "11:30",
+            "page_viewed",
+            "view"
+          ]
+        ]
+      ],
+      [
+        "101_s3",
+        "2026-04-02 14:15:00",
+        [
+          [
+            "14:15",
+            "settings_opened",
+            "view"
+          ],
+          [
+            "14:15",
+            "settings_closed",
+            "close"
+          ]
+        ]
+      ]
+    ],
+    "sn": 3,
+    "te": 7,
+    "u": "101"
+  },
+  {
+    "attrs": {},
+    "fc": {
+      "click": 1,
+      "error": 1,
+      "other": 1,
+      "start": 1,
+      "submit": 2,
+      "view": 3
+    },
+    "fs": "2026-04-01 10:05:00",
+    "ls": "2026-04-03 08:05:00",
+    "s": [
+      [
+        "102_s1",
+        "2026-04-01 10:05:00",
+        [
+          [
+            "10:05",
+            "page_viewed",
+            "view"
+          ],
+          [
+            "10:05",
+            "search_submitted",
+            "submit"
+          ],
+          [
+            "10:06",
+            "result_clicked",
+            "click"
+          ],
+          [
+            "10:06",
+            "item_viewed",
+            "view"
+          ]
+        ]
+      ],
+      [
+        "102_s2",
+        "2026-04-03 08:00:00",
+        [
+          [
+            "08:00",
+            "page_viewed",
+            "view"
+          ],
+          [
+            "08:02",
+            "checkout_started",
+            "start"
+          ],
+          [
+            "08:03",
+            "checkout_failed",
+            "error"
+          ],
+          [
+            "08:04",
+            "checkout_retried",
+            "other"
+          ],
+          [
+            "08:05",
+            "checkout_completed",
+            "submit"
+          ]
+        ]
+      ]
+    ],
+    "sn": 2,
+    "te": 9,
+    "u": "102"
+  },
+  {
+    "attrs": {},
+    "fc": {
+      "close": 1,
+      "view": 3
+    },
+    "fs": "2026-04-02 16:00:00",
+    "ls": "2026-04-02 16:01:30",
+    "s": [
+      [
+        "103_s1",
+        "2026-04-02 16:00:00",
+        [
+          [
+            "16:00",
+            "page_viewed",
+            "view"
+          ],
+          [
+            "16:00",
+            "help_opened",
+            "view"
+          ],
+          [
+            "16:01",
+            "help_closed",
+            "close"
+          ],
+          [
+            "16:01",
+            "page_viewed",
+            "view"
+          ]
+        ]
+      ]
+    ],
+    "sn": 1,
+    "te": 4,
+    "u": "103"
+  }
+]

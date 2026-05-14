@@ -1,0 +1,9 @@
+user_id,timestamp,event_name,extra
+u1,2024-01-05T09:00:00,page_viewed,hello
+u1,2024-01-05T09:02:00,page_viewed,hello
+u1,2024-01-05T09:02:00,page_viewed,hello
+u1,1704448800,button_clicked,world
+u2,2024-01-06 14:30:00,form_submitted,
+u2,2024-01-06T14:31:00Z,form_submitted,
+u2,2024-01-06T14:35:00,page_viewed,ok
+u1,2024-03-01T08:00:00,page_viewed,

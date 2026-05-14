@@ -1,0 +1,21 @@
+user_id,timestamp,event_name
+101,2026-04-01 09:00:00,page_viewed
+101,2026-04-01 09:00:15,signup_clicked
+101,2026-04-01 09:01:00,signup_submitted
+101,2026-04-01 09:01:05,welcome_viewed
+101,2026-04-01 11:30:00,page_viewed
+101,2026-04-02 14:15:00,settings_opened
+101,2026-04-02 14:15:12,settings_closed
+102,2026-04-01 10:05:00,page_viewed
+102,2026-04-01 10:05:30,search_submitted
+102,2026-04-01 10:06:00,result_clicked
+102,2026-04-01 10:06:30,item_viewed
+102,2026-04-03 08:00:00,page_viewed
+102,2026-04-03 08:02:00,checkout_started
+102,2026-04-03 08:03:00,checkout_failed
+102,2026-04-03 08:04:00,checkout_retried
+102,2026-04-03 08:05:00,checkout_completed
+103,2026-04-02 16:00:00,page_viewed
+103,2026-04-02 16:00:45,help_opened
+103,2026-04-02 16:01:00,help_closed
+103,2026-04-02 16:01:30,page_viewed

@@ -1,0 +1,9 @@
+user_id,timestamp,event_name,user_country,user_plan
+201,2026-04-01 10:00:00,page_viewed,PL,premium
+201,2026-04-01 10:01:00,item_clicked,PL,premium
+201,2026-04-01 10:01:30,checkout_started,PL,premium
+201,2026-04-01 10:03:00,checkout_completed,PL,premium
+202,2026-04-01 11:00:00,page_viewed,UA,free
+202,2026-04-01 11:00:30,item_clicked,UA,free
+202,2026-04-01 11:01:00,checkout_started,UA,free
+202,2026-04-01 11:35:00,page_viewed,UA,free
