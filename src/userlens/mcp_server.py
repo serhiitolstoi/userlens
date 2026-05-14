@@ -10,6 +10,7 @@ from typing import Any
 
 from userlens.insights import extract_insights
 from userlens.pipeline import PipelineOptions, run
+from userlens.viewer import render
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -305,6 +306,41 @@ def summarize_cohort_impl(
     }
 
 
+def export_html_impl(
+    blobs: _Blobs,
+    meta: dict[str, Any],
+    output: str,
+    user_ids: list[str] | None = None,
+    filters: str = "{}",
+) -> dict[str, Any]:
+    """Render an HTML report for a selected subset of users.
+
+    Filters are applied first, then user_ids (if provided) further restrict the set.
+    """
+    filtered = _apply_filters(blobs, filters)
+
+    if user_ids:
+        id_set = set(user_ids)
+        filtered = [b for b in filtered if b["u"] in id_set]
+        missing = id_set - {b["u"] for b in filtered}
+        if missing:
+            return {"error": f"User(s) not found: {sorted(missing)}"}
+
+    if not filtered:
+        return {"error": "No users matched the given filters/user_ids"}
+
+    out_path = Path(output)
+    render(filtered, meta, out_path, open_browser=False)
+
+    return {
+        "output": str(out_path.resolve()),
+        "users_included": len(filtered),
+        "user_ids": [b["u"] for b in filtered],
+        "total_events": sum(b.get("te", 0) for b in filtered),
+        "size_bytes": out_path.stat().st_size,
+    }
+
+
 def find_users_by_event_impl(
     blobs: _Blobs,
     meta: dict[str, Any],
@@ -417,5 +453,25 @@ def main_mcp(events_file: str | None = None) -> None:
         return find_users_by_event_impl(
             blobs, meta, event_name=event_name, min_occurrences=min_occurrences, limit=limit
         )
+
+    @mcp.tool()
+    def export_html(
+        file: str,
+        output: str = "report.html",
+        user_ids: list[str] | None = None,
+        filters: str = "{}",
+    ) -> dict[str, Any]:
+        """Generate a self-contained HTML report for a selected subset of users.
+
+        Use this after list_users/analyze_user to build a focused HTML report.
+
+        Args:
+            file: Path to events file.
+            output: Output HTML path (default 'report.html').
+            user_ids: Optional list of specific user IDs to include.
+            filters: Optional JSON attribute filters e.g. '{"user_plan": "pro"}'.
+        """
+        blobs, meta = _load_file(file)
+        return export_html_impl(blobs, meta, output=output, user_ids=user_ids, filters=filters)
 
     mcp.run(transport="stdio")

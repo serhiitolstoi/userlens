@@ -9,6 +9,7 @@ import pytest
 from userlens.mcp_server import (
     _load_file,
     analyze_user_impl,
+    export_html_impl,
     find_users_by_event_impl,
     get_event_taxonomy_impl,
     list_users_impl,
@@ -201,3 +202,50 @@ def test_list_users_limit() -> None:
     result = list_users_impl(blobs, meta, limit=2)
     assert len(result["users"]) <= 2
     assert result["total"] == 3
+
+
+# ---------------------------------------------------------------------------
+# test_export_html
+# ---------------------------------------------------------------------------
+
+def test_export_html_all_users(tmp_path: Path) -> None:
+    blobs, meta = _load_tiny()
+    out = str(tmp_path / "out.html")
+    result = export_html_impl(blobs, meta, output=out)
+    assert "error" not in result
+    assert result["users_included"] == len(blobs)
+    assert Path(out).exists()
+    assert result["size_bytes"] > 1000
+
+
+def test_export_html_subset(tmp_path: Path) -> None:
+    blobs, meta = _load_tiny()
+    first_uid = blobs[0]["u"]
+    out = str(tmp_path / "subset.html")
+    result = export_html_impl(blobs, meta, output=out, user_ids=[first_uid])
+    assert "error" not in result
+    assert result["users_included"] == 1
+    assert result["user_ids"] == [first_uid]
+    # HTML should contain the user_id string
+    html = Path(out).read_text()
+    assert first_uid in html
+
+
+def test_export_html_missing_user(tmp_path: Path) -> None:
+    blobs, meta = _load_tiny()
+    out = str(tmp_path / "miss.html")
+    result = export_html_impl(blobs, meta, output=out, user_ids=["nonexistent_user"])
+    assert "error" in result
+
+
+def test_export_html_with_filter(tmp_path: Path) -> None:
+    blobs, meta = _load_file(WITH_ATTRS)
+    out = str(tmp_path / "filtered.html")
+    # with_attrs.csv has user_country column — pick the first user's country as filter
+    first_country = blobs[0]["attrs"].get("user_country", "")
+    if not first_country:
+        pytest.skip("no user_country in with_attrs fixture")
+    result = export_html_impl(blobs, meta, output=out,
+                              filters=f'{{"user_country": "{first_country}"}}')
+    assert "error" not in result
+    assert result["users_included"] >= 1
