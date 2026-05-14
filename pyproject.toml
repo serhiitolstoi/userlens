@@ -36,6 +36,7 @@ dev = [
   "ruff>=0.5",
   "mypy>=1.10",
   "pyarrow>=14.0",
+  "mcp>=1.0",
 ]
 
 [project.scripts]
