@@ -72,7 +72,29 @@ These flags are reserved. The parser recognises them and prints "coming soon":
 
 - `--profile` — emit per-user JSON blobs without HTML
 - `--user USER_ID` — emit blob for a single user
-- `--mcp` — start the MCP server (v2)
 - `--serve` — self-hosted mode with file-watch (v2)
 - `--llm-summarize` — LLM narrative generation (v2.1)
 - `--diff` — compare two event files (v3)
+
+## MCP Server (v2.0)
+
+Start the server:
+
+```
+userlens mcp events.csv
+```
+
+MCP config (Claude Desktop / Cursor / any MCP client):
+
+```json
+{
+  "mcpServers": {
+    "userlens": {
+      "command": "userlens",
+      "args": ["mcp", "/path/to/events.csv"]
+    }
+  }
+}
+```
+
+Available tools: `list_users`, `analyze_user`, `get_event_taxonomy`, `summarize_cohort`, `find_users_by_event`.

@@ -321,6 +321,9 @@ function selectUser(uid){
   detailEl.style.display='block';
   renderCard(u);
   renderHeatmap(u);
+  // clear stale hidden-event cache from previous user
+  for(const k in _tlHidden) delete _tlHidden[k];
+  _tlHiddenIdx=0;
   renderTimeline(u);
   renderTopEvents(u);
   switchTab('pane-tl');
@@ -351,16 +354,26 @@ copyBtn.addEventListener('click',()=>{
 
 /* ── timeline ───────────────────────────────────────────────── */
 const TL_CAP=500; // max events rendered before "show all" expander
+const _tlHidden={}; // key → pre-rendered HTML for hidden events
+let _tlHiddenIdx=0;
 
 function renderEventRow(ev){
   const[hhmm,name,fam,...props]=ev;
   const propsHtml=pairs(props).map(([k,v])=>`<span class="eprop">${esc(k)}=${esc(v)}</span>`).join('');
-  return `<div class="erow">
-    <span class="etime">${esc(hhmm)}</span>
-    <span class="ename fam-${CSS.escape(fam)}">${esc(name)}</span>
-    ${propsHtml?`<span class="eprops">${propsHtml}</span>`:''}
-  </div>`;
+  return `<div class="erow"><span class="etime">${esc(hhmm)}</span><span class="ename fam-${CSS.escape(fam)}">${esc(name)}</span>${propsHtml?`<span class="eprops">${propsHtml}</span>`:''}</div>`;
 }
+
+// Event delegation: one listener handles all "show more" clicks regardless of IIFE scope
+document.addEventListener('click',function(e){
+  const btn=e.target.closest('.tl-more-btn');
+  if(!btn) return;
+  const key=btn.dataset.key;
+  const html=_tlHidden[key]||'';
+  delete _tlHidden[key];
+  const more=btn.closest('.tl-more');
+  more.previousElementSibling.insertAdjacentHTML('beforeend',html);
+  more.remove();
+});
 
 function renderTimeline(u){
   // Count total events to decide whether to cap
@@ -379,13 +392,12 @@ function renderTimeline(u){
     const timeLabel=fmt.time||'';
     const rawDate=fmt.raw||ts.slice(0,10);
 
-    const hiddenHtml=hidden.length
-      ? `<div class="tl-more">
-          <button class="tl-more-btn" onclick="this.closest('.tl-more').previousSibling.insertAdjacentHTML('afterend',${JSON.stringify(hidden.map(renderEventRow).join(''))});this.closest('.tl-more').remove()">
-            Show ${hidden.length} more event${hidden.length!==1?'s':''} in this session
-          </button>
-        </div>`
-      : '';
+    let hiddenHtml='';
+    if(hidden.length){
+      const key='tlh'+(++_tlHiddenIdx);
+      _tlHidden[key]=hidden.map(renderEventRow).join('');
+      hiddenHtml=`<div class="tl-more"><button class="tl-more-btn" data-key="${key}">↓ Show ${hidden.length} more event${hidden.length!==1?'s':''} in this session</button></div>`;
+    }
     return `<details class="sess" open>
       <summary><span class="sess-arrow">▶</span><span class="sess-date" data-rawdate="${esc(rawDate)}">${esc(dateLabel)}</span><span class="sess-time">${esc(timeLabel)}</span><span class="sess-badge">${evs.length} event${evs.length!==1?'s':''}</span></summary>
       <div class="sess-body">${visible.map(renderEventRow).join('')}</div>${hiddenHtml}

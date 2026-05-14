@@ -9,6 +9,7 @@ from pathlib import Path
 
 from userlens import __version__
 from userlens.io.reader import ReadError
+from userlens.mcp_server import main_mcp as _main_mcp
 from userlens.pipeline import PipelineOptions, run
 from userlens.schema.sniff import SchemaError
 from userlens.viewer import render
@@ -22,7 +23,6 @@ EXIT_EMPTY = 3
 _COMING_SOON: dict[str, str] = {
     "--profile": "v2 (structured JSON output per user)",
     "--user": "v2 (single-user JSON output)",
-    "--mcp": "v2 (MCP server mode)",
     "--serve": "v2 (self-hosted file-watch mode)",
     "--llm-summarize": "v2.1 (LLM narrative generation)",
     "--diff": "v3 (compare two event files)",
@@ -30,6 +30,20 @@ _COMING_SOON: dict[str, str] = {
     "--tz": "v1.1 (explicit timezone)",
     "--cohort": "v1.1 (cohort summary tab)",
 }
+
+
+def _build_mcp_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="userlens mcp",
+        description="Start the userlens MCP server. Requires: pip install 'userlens[mcp]'",
+    )
+    parser.add_argument(
+        "events_file",
+        nargs="?",
+        default=None,
+        help="Optional path to events file to pre-load.",
+    )
+    return parser
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -78,8 +92,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Intercept `mcp` subcommand before the main parser sees it.
+    # This avoids argparse confusing a file path with a subcommand name.
+    effective_argv = list(argv) if argv is not None else sys.argv[1:]
+    if effective_argv and effective_argv[0] == "mcp":
+        mcp_parser = _build_mcp_parser()
+        mcp_args = mcp_parser.parse_args(effective_argv[1:])
+        _main_mcp(mcp_args.events_file)
+        return EXIT_OK
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(effective_argv)
 
     # Check if any reserved flag was passed
     for flag, roadmap in _COMING_SOON.items():
