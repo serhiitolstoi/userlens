@@ -99,23 +99,38 @@ def _compute_power_score(blob: dict[str, Any], all_blobs: list[dict[str, Any]]) 
 
 
 def _compute_stuck_signals(sessions: list[Any]) -> list[dict[str, Any]]:
-    """Find >=3 consecutive identical event names in any session."""
-    results: list[dict[str, Any]] = []
+    """Find >=3 consecutive identical event names in any session.
+
+    Deduplicates per (session, event) keeping the max run length.
+    Returns top 10 by count — noisy core events (message_sent,
+    response_received) require a higher bar (>=5) to surface.
+    """
+    # Core conversation events need a higher threshold — 3-in-a-row is normal
+    HIGH_THRESHOLD = {"message_sent", "response_received"}
+    DEFAULT_THRESHOLD = 3
+    HIGH_THRESHOLD_COUNT = 5
+
+    # key=(session_id, event_name) → max run length seen
+    best: dict[tuple[str, str], int] = {}
+
     for s in sessions:
-        session_id = s[0] if len(s) > 0 else ""
+        session_id = str(s[0]) if len(s) > 0 else ""
         events = s[2] if len(s) > 2 else []
         event_names = [e[1] for e in events if len(e) > 1]
         for event_name, group in groupby(event_names):
             count = sum(1 for _ in group)
-            if count >= 3:
-                results.append(
-                    {
-                        "session": str(session_id),
-                        "event": str(event_name),
-                        "count": count,
-                    }
-                )
-    return results
+            threshold = HIGH_THRESHOLD_COUNT if event_name in HIGH_THRESHOLD else DEFAULT_THRESHOLD
+            if count >= threshold:
+                key = (session_id, str(event_name))
+                best[key] = max(best.get(key, 0), count)
+
+    results: list[dict[str, Any]] = [
+        {"session": sid, "event": ev, "count": cnt}
+        for (sid, ev), cnt in best.items()
+    ]
+    # Return top 10 by count
+    results.sort(key=lambda x: x["count"], reverse=True)
+    return results[:10]
 
 
 def _compute_family_first_seen(sessions: list[Any]) -> dict[str, str]:
