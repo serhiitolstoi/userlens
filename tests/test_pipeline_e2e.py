@@ -106,6 +106,55 @@ def test_meta_has_required_keys() -> None:
     assert "generatedAt" in result.meta
 
 
+def test_redact_cols_replaced() -> None:
+    result = run(PipelineOptions(
+        events_path=FIXTURES / "with_attrs.csv",
+        redact_cols=("user_country",),
+    ))
+    by_user = {b["u"]: b for b in result.blobs}
+    # user_country is a user attribute — should be redacted in attrs
+    assert by_user["201"]["attrs"].get("user_country") == "<redacted>"
+    assert by_user["202"]["attrs"].get("user_country") == "<redacted>"
+    # user_plan not redacted
+    assert by_user["201"]["attrs"].get("user_plan") == "premium"
+
+
+def test_redact_unknown_col_is_noop() -> None:
+    # Should not raise, just silently skip missing columns
+    result = run(PipelineOptions(
+        events_path=FIXTURES / "tiny.csv",
+        redact_cols=("nonexistent_col",),
+    ))
+    assert len(result.blobs) == 3
+
+
+def test_timezone_conversion() -> None:
+    result_utc = run(PipelineOptions(events_path=FIXTURES / "tiny.csv"))
+    result_tz = run(PipelineOptions(
+        events_path=FIXTURES / "tiny.csv",
+        timezone="Europe/Lisbon",
+    ))
+    # tiny.csv timestamps are in UTC; Europe/Lisbon is UTC+1 in summer
+    # first session start should differ
+    by_user_utc = {b["u"]: b for b in result_utc.blobs}
+    by_user_tz = {b["u"]: b for b in result_tz.blobs}
+    # With timezone applied, the displayed time differs from UTC
+    # (exact offset depends on DST, but they should not be equal)
+    assert by_user_utc["101"]["fs"] != by_user_tz["101"]["fs"]
+
+
+def test_timezone_utc_no_change() -> None:
+    # Applying UTC timezone to UTC data should produce the same display times
+    result_default = run(PipelineOptions(events_path=FIXTURES / "tiny.csv"))
+    result_utc = run(PipelineOptions(
+        events_path=FIXTURES / "tiny.csv",
+        timezone="UTC",
+    ))
+    by_default = {b["u"]: b for b in result_default.blobs}
+    by_utc = {b["u"]: b for b in result_utc.blobs}
+    assert by_default["101"]["fs"] == by_utc["101"]["fs"]
+
+
 def test_golden_snapshot() -> None:
     """Pin the tiny.csv output shape. On first run writes the snapshot; on subsequent runs asserts equality."""
     result = run(PipelineOptions(events_path=FIXTURES / "tiny.csv"))

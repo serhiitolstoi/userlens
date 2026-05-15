@@ -45,6 +45,8 @@ class PipelineOptions:
     max_users: int | None = 5000
     session_gap_minutes: int = 30
     no_families: bool = False
+    redact_cols: tuple[str, ...] = ()
+    timezone: str | None = None
 
 
 @dataclass(frozen=True)
@@ -71,6 +73,14 @@ def run(options: PipelineOptions) -> PipelineResult:
     )
 
     normalized = normalize_dataframe(df, sniffed.schema)
+
+    # Optional: timezone conversion
+    if options.timezone:
+        normalized = _apply_timezone(normalized, options.timezone)
+
+    # Optional: redact named columns
+    if options.redact_cols:
+        normalized = _apply_redaction(normalized, options.redact_cols)
 
     # M2: derive enrichment
     attr_cols, prop_cols = classify_extras(normalized, sniffed.schema)
@@ -122,6 +132,25 @@ def run(options: PipelineOptions) -> PipelineResult:
         n_events=normalized.height,
         n_sessions=n_sessions,
     )
+
+
+def _apply_timezone(df: pl.DataFrame, tz: str) -> pl.DataFrame:
+    """Convert the timestamp column to the given IANA timezone (e.g. 'Europe/Lisbon')."""
+    ts_dtype = df.schema["timestamp"]
+    # Naive timestamps: assume UTC, then convert
+    if not isinstance(ts_dtype, pl.Datetime) or ts_dtype.time_zone is None:
+        df = df.with_columns(pl.col("timestamp").dt.replace_time_zone("UTC"))
+    return df.with_columns(pl.col("timestamp").dt.convert_time_zone(tz))
+
+
+def _apply_redaction(df: pl.DataFrame, cols: tuple[str, ...]) -> pl.DataFrame:
+    """Replace values in the named columns with '<redacted>'."""
+    exprs = [
+        pl.lit("<redacted>").alias(c)
+        for c in cols
+        if c in df.columns
+    ]
+    return df.with_columns(exprs) if exprs else df
 
 
 def _build_top_events(

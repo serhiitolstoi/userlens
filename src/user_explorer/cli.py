@@ -26,8 +26,6 @@ _COMING_SOON: dict[str, str] = {
     "--user": "v2 (single-user JSON output)",
     "--llm-summarize": "v2.1 (LLM narrative generation)",
     "--diff": "v3 (compare two event files)",
-    "--redact": "v1.1 (redact named property columns)",
-    "--tz": "v1.1 (explicit timezone)",
     "--cohort": "v1.1 (cohort summary tab)",
 }
 
@@ -91,6 +89,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-families", action="store_true", help="Skip family clustering.")
     parser.add_argument(
+        "--redact",
+        nargs="+",
+        metavar="COL",
+        default=None,
+        help="Replace values in these columns with <redacted> before output.",
+    )
+    parser.add_argument(
+        "--tz",
+        default=None,
+        metavar="TZ",
+        help="Display timestamps in this IANA timezone (e.g. Europe/Lisbon, UTC).",
+    )
+    parser.add_argument(
         "--no-open", action="store_true", help="Write HTML but suppress auto-opening the browser."
     )
     parser.add_argument(
@@ -150,6 +161,8 @@ def main(argv: list[str] | None = None) -> int:
         max_users=args.max_users,
         session_gap_minutes=args.session_gap,
         no_families=args.no_families,
+        redact_cols=tuple(args.redact) if args.redact else (),
+        timezone=args.tz,
     )
 
     try:
@@ -186,10 +199,17 @@ def main(argv: list[str] | None = None) -> int:
         f"{len(result.blobs)} users · {result.n_events} events · {result.elapsed_ms} ms",
         file=sys.stderr,
     )
-    print(
-        "Note: output contains all event properties verbatim. Inspect before sharing.",
-        file=sys.stderr,
-    )
+    if args.redact:
+        print(
+            f"Note: columns redacted: {', '.join(args.redact)}. Other properties are verbatim.",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            "Note: output contains all event properties verbatim. "
+            "Use --redact COL to hide sensitive columns before sharing.",
+            file=sys.stderr,
+        )
     return EXIT_OK
 
 

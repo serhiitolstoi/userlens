@@ -41,6 +41,7 @@ CSV, Parquet, JSON, and JSONL all work.
 ```
 user-explorer EVENTS_FILE [-o OUT] [--user-id COL] [--timestamp COL] [--event-name COL]
                           [--session-gap MINUTES] [--max-users N] [--no-families]
+                          [--redact COL [COL ...]] [--tz TZ]
                           [--no-open] [--quiet]
 ```
 
@@ -49,6 +50,8 @@ user-explorer EVENTS_FILE [-o OUT] [--user-id COL] [--timestamp COL] [--event-na
 | `-o` | `userexplorer.html` | Output path |
 | `--session-gap` | `30` min | Gap for session splitting when no `session_id` column |
 | `--max-users` | `5000` | Cap users in output |
+| `--redact COL` | — | Replace values in named columns with `<redacted>` before writing HTML |
+| `--tz TZ` | — | Display timestamps in this IANA timezone (e.g. `Europe/Lisbon`, `UTC`) |
 | `--no-open` | off | Don't open browser after writing |
 | `--quiet` | off | Emit one JSON line to stdout (for AI agents) |
 
