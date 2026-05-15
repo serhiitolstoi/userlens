@@ -10,7 +10,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, "-m", "userlens", *args],
+        [sys.executable, "-m", "user_explorer", *args],
         capture_output=True,
         text=True,
         check=False,
@@ -39,7 +39,7 @@ def test_schema_error_exit_code() -> None:
 
 
 def test_missing_file_exits_nonzero() -> None:
-    proc = _run(["/tmp/does-not-exist-userlens.csv", "--quiet"])
+    proc = _run(["/tmp/does-not-exist-user-explorer.csv", "--quiet"])
     assert proc.returncode != 0
 
 

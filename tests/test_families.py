@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import polars as pl
 
-from userlens.derive.families import derive_families
+from user_explorer.derive.families import derive_families
 
 
 def _series(names: list[str]) -> pl.Series:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from userlens.pipeline import PipelineOptions, run
-from userlens.viewer.render import render
+from user_explorer.pipeline import PipelineOptions, run
+from user_explorer.viewer.render import render
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -16,7 +16,7 @@ def test_render_writes_html(tmp_path: Path) -> None:
     assert out.exists()
     html = out.read_text(encoding="utf-8")
     assert "<!DOCTYPE html>" in html
-    assert "userlens" in html
+    assert "User Explorer" in html
 
 
 def test_render_embeds_user_ids(tmp_path: Path) -> None:

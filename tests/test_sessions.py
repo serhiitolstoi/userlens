@@ -4,9 +4,9 @@ from pathlib import Path
 
 import polars as pl
 
-from userlens.derive.sessions import derive_sessions
-from userlens.pipeline import PipelineOptions, run
-from userlens.schema.types import ResolvedSchema
+from user_explorer.derive.sessions import derive_sessions
+from user_explorer.pipeline import PipelineOptions, run
+from user_explorer.schema.types import ResolvedSchema
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

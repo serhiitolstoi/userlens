@@ -1,4 +1,4 @@
-# userlens
+# User Explorer
 
 > **Investigate any user in 30 seconds.**
 
@@ -6,8 +6,8 @@ Drop a CSV of events → get a single HTML file with timelines, sessions, and fi
 Runs locally. No accounts. No config. Works offline.
 
 ```
-pip install userlens
-userlens events.csv
+pip install user-explorer
+user-explorer events.csv
 ```
 
 That's it.
@@ -39,14 +39,14 @@ CSV, Parquet, JSON, and JSONL all work.
 ## CLI
 
 ```
-userlens EVENTS_FILE [-o OUT] [--user-id COL] [--timestamp COL] [--event-name COL]
-                     [--session-gap MINUTES] [--max-users N] [--no-families]
-                     [--no-open] [--quiet]
+user-explorer EVENTS_FILE [-o OUT] [--user-id COL] [--timestamp COL] [--event-name COL]
+                          [--session-gap MINUTES] [--max-users N] [--no-families]
+                          [--no-open] [--quiet]
 ```
 
 | Flag | Default | Purpose |
 |---|---|---|
-| `-o` | `userlens.html` | Output path |
+| `-o` | `userexplorer.html` | Output path |
 | `--session-gap` | `30` min | Gap for session splitting when no `session_id` column |
 | `--max-users` | `5000` | Cap users in output |
 | `--no-open` | off | Don't open browser after writing |
@@ -57,8 +57,8 @@ userlens EVENTS_FILE [-o OUT] [--user-id COL] [--timestamp COL] [--event-name CO
 ## For AI agents
 
 ```bash
-userlens events.csv --no-open --quiet
-# → {"out":"userlens.html","users":91,"events":12480,"sessions":520,"elapsed_ms":1340,"schema":{...}}
+user-explorer events.csv --no-open --quiet
+# → {"out":"userexplorer.html","users":91,"events":12480,"sessions":520,"elapsed_ms":1340,"schema":{...}}
 ```
 
 See [docs/agent-usage.md](docs/agent-usage.md) for the full agent contract including MCP.
@@ -68,10 +68,10 @@ See [docs/agent-usage.md](docs/agent-usage.md) for the full agent contract inclu
 Watch an events file and serve a live-updating HTML report over HTTP. Rebuilds automatically when the file changes:
 
 ```bash
-userlens serve events.csv                  # http://localhost:7891
-userlens serve events.csv --port 9000      # custom port
-userlens serve events.csv --api            # also expose JSON REST endpoints
-userlens serve events.csv --no-open        # don't auto-open browser
+user-explorer serve events.csv                  # http://localhost:7891
+user-explorer serve events.csv --port 9000      # custom port
+user-explorer serve events.csv --api            # also expose JSON REST endpoints
+user-explorer serve events.csv --no-open        # don't auto-open browser
 ```
 
 **REST API** (with `--api`):
@@ -94,8 +94,8 @@ This is the integration point for internal tools, Slack bots, or any HTTP-native
 Query your event data directly from any MCP-compatible AI assistant (Claude Desktop, Cursor, Claude Code):
 
 ```bash
-pip install 'userlens[mcp]'
-userlens mcp /path/to/events.csv
+pip install 'user-explorer[mcp]'
+user-explorer mcp /path/to/events.csv
 ```
 
 MCP config:
@@ -103,8 +103,8 @@ MCP config:
 ```json
 {
   "mcpServers": {
-    "userlens": {
-      "command": "userlens",
+    "user-explorer": {
+      "command": "user-explorer",
       "args": ["mcp", "/path/to/events.csv"]
     }
   }
@@ -130,7 +130,7 @@ MCP config:
 3. export_html(file, "report.html", user_ids=["usr_alex_chen", "usr_omar_f"])
 ```
 
-The last step produces a standard userlens HTML with only the curated subset.
+The last step produces a standard User Explorer HTML with only the curated subset.
 
 ## Recipes
 
@@ -142,7 +142,7 @@ The last step produces a standard userlens HTML with only the curated subset.
 
 ```bash
 # Try with the included synthetic Claude product analytics example
-userlens examples/claude_product_analytics.csv
+user-explorer examples/claude_product_analytics.csv
 ```
 
 8 synthetic users, 10k events, Claude-product event schema with model/token properties.
@@ -150,9 +150,9 @@ userlens examples/claude_product_analytics.csv
 ## Install
 
 ```bash
-pip install userlens                   # core (CSV/JSON/JSONL)
-pip install 'userlens[parquet]'        # + Parquet support
-pip install 'userlens[mcp]'            # + MCP server
+pip install user-explorer                   # core (CSV/JSON/JSONL)
+pip install 'user-explorer[parquet]'        # + Parquet support
+pip install 'user-explorer[mcp]'            # + MCP server
 ```
 
 Requires Python ≥ 3.10. Single mandatory dependency: [Polars](https://pola.rs/).

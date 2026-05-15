@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from userlens.pipeline import PipelineOptions, run
+from user_explorer.pipeline import PipelineOptions, run
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SNAPSHOT_PATH = FIXTURES / "tiny_snapshot.json"

@@ -1,4 +1,4 @@
-from userlens.cli import main
+from user_explorer.cli import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

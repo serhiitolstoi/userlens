@@ -2,7 +2,7 @@
 
 ## Overview
 
-userlens is a single-pass pipeline: read → sniff → materialize → classify → derive → build blobs → render HTML.
+User Explorer is a single-pass pipeline: read → sniff → materialize → classify → derive → build blobs → render HTML.
 
 Each step is a pure function in its own module. The orchestrator (`pipeline.py`) wires them together and returns a `PipelineResult` dataclass before any HTML is written.
 
@@ -30,7 +30,7 @@ transform/build.py    ← build one blob dict per user
 viewer/render.py      ← inject blobs + meta into template.html → write atomically
     │
     ▼
-userlens.html         ← self-contained, no external dependencies
+userexplorer.html     ← self-contained, no external dependencies
 ```
 
 ## Key design choices
@@ -69,9 +69,9 @@ Family colors are `hash(name) % 12` into a fixed 12-hue palette. The same family
 ## Module map
 
 ```
-src/userlens/
+src/user_explorer/
 ├── __init__.py          version, public API surface
-├── __main__.py          python -m userlens entry point
+├── __main__.py          python -m user_explorer entry point
 ├── cli.py               argparse wiring, exit code handling
 ├── pipeline.py          PipelineOptions, PipelineResult, run()
 ├── version.py           __version__ = "..."

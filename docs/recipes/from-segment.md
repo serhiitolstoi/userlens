@@ -6,7 +6,7 @@ In your Segment workspace: **Connections → Sources → your source → Debugge
 
 The resulting file typically has these columns:
 
-| Segment column | userlens canonical |
+| Segment column | User Explorer canonical |
 |---|---|
 | `userId` | `user_id` |
 | `sentAt` | `timestamp` |
@@ -14,10 +14,10 @@ The resulting file typically has these columns:
 | `anonymousId` | (skip — use `userId`) |
 | `properties.*` flattened | event properties |
 
-## Run userlens
+## Run User Explorer
 
 ```
-userlens segment_export.csv \
+user-explorer segment_export.csv \
   --user-id userId \
   --timestamp sentAt \
   --event-name event
@@ -26,7 +26,7 @@ userlens segment_export.csv \
 If the export has `anonymousId` but no `userId` (anonymous traffic):
 
 ```
-userlens segment_export.csv \
+user-explorer segment_export.csv \
   --user-id anonymousId \
   --timestamp sentAt \
   --event-name event
@@ -34,15 +34,15 @@ userlens segment_export.csv \
 
 ## Flattened properties
 
-Segment exports flatten `properties` into dot-notation columns (`properties.page`, `properties.revenue`). userlens treats each as an event property chip automatically — no extra config needed.
+Segment exports flatten `properties` into dot-notation columns (`properties.page`, `properties.revenue`). User Explorer treats each as an event property chip automatically — no extra config needed.
 
 ## Large exports
 
-Segment exports for active workspaces can be millions of rows. userlens handles up to ~5M events comfortably. For larger volumes:
+Segment exports for active workspaces can be millions of rows. User Explorer handles up to ~5M events comfortably. For larger volumes:
 
 ```
 # Filter to a time window first
-userlens segment_export.csv --max-users 1000 -o segment_sample.html
+user-explorer segment_export.csv --max-users 1000 -o segment_sample.html
 ```
 
 Or pre-filter with a tool like DuckDB:
@@ -55,4 +55,4 @@ COPY (
 ) TO 'filtered.csv' (HEADER, DELIMITER ',');
 ```
 
-Then run userlens on `filtered.csv`.
+Then run User Explorer on `filtered.csv`.

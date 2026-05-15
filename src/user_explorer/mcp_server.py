@@ -1,4 +1,4 @@
-"""MCP server for userlens — exposes pipeline results as MCP tools."""
+"""MCP server for User Explorer — exposes pipeline results as MCP tools."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from userlens.insights import extract_insights
-from userlens.pipeline import PipelineOptions, run
-from userlens.viewer import render
+from user_explorer.insights import extract_insights
+from user_explorer.pipeline import PipelineOptions, run
+from user_explorer.viewer import render
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -379,10 +379,10 @@ def find_users_by_event_impl(
 def main_mcp(events_file: str | None = None) -> None:
     if not _MCP_AVAILABLE:
         raise ImportError(
-            "mcp package not installed. Install with: pip install 'userlens[mcp]'"
+            "mcp package not installed. Install with: pip install 'user-explorer[mcp]'"
         )
 
-    mcp = FastMCP("userlens")
+    mcp = FastMCP("user-explorer")
 
     @mcp.tool()
     def list_users(

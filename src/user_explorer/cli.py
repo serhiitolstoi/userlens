@@ -1,4 +1,4 @@
-"""Command-line interface for userlens."""
+"""Command-line interface for User Explorer."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ import json
 import sys
 from pathlib import Path
 
-from userlens import __version__
-from userlens.io.reader import ReadError
-from userlens.mcp_server import main_mcp as _main_mcp
-from userlens.pipeline import PipelineOptions, run
-from userlens.schema.sniff import SchemaError
-from userlens.server import serve as _serve
-from userlens.viewer import render
+from user_explorer import __version__
+from user_explorer.io.reader import ReadError
+from user_explorer.mcp_server import main_mcp as _main_mcp
+from user_explorer.pipeline import PipelineOptions, run
+from user_explorer.schema.sniff import SchemaError
+from user_explorer.server import serve as _serve
+from user_explorer.viewer import render
 
 EXIT_OK = 0
 EXIT_OTHER = 1
@@ -34,7 +34,7 @@ _COMING_SOON: dict[str, str] = {
 
 def _build_serve_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="userlens serve",
+        prog="user-explorer serve",
         description="Watch an events file and serve a live-updating HTML report.",
     )
     parser.add_argument("events_file", type=Path, help="Path to events file.")
@@ -53,8 +53,8 @@ def _build_serve_parser() -> argparse.ArgumentParser:
 
 def _build_mcp_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="userlens mcp",
-        description="Start the userlens MCP server. Requires: pip install 'userlens[mcp]'",
+        prog="user-explorer mcp",
+        description="Start the User Explorer MCP server. Requires: pip install 'user-explorer[mcp]'",  # noqa: E501
     )
     parser.add_argument(
         "events_file",
@@ -67,12 +67,12 @@ def _build_mcp_parser() -> argparse.ArgumentParser:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="userlens",
+        prog="user-explorer",
         description="Investigate any user in 30 seconds. "
         "Drop a CSV of events; get an interactive HTML.",
     )
     parser.add_argument("events", type=Path, help="Path to events file (CSV/Parquet/JSON/JSONL).")
-    parser.add_argument("-o", "--out", default="userlens.html", help="Output HTML path.")
+    parser.add_argument("-o", "--out", default="userexplorer.html", help="Output HTML path.")
     parser.add_argument("--user-id", dest="user_id", default=None, help="Explicit user_id column.")
     parser.add_argument(
         "--timestamp", dest="timestamp", default=None, help="Explicit timestamp column."
@@ -98,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit a single JSON-line summary on stdout. Used by AI agents.",
     )
-    parser.add_argument("--version", action="version", version=f"userlens {__version__}")
+    parser.add_argument("--version", action="version", version=f"user-explorer {__version__}")
 
     # Reserved flags — accepted so they print a helpful message instead of an argparse error
     for flag in _COMING_SOON:
@@ -139,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     for flag, roadmap in _COMING_SOON.items():
         attr = f"_reserved_{flag.lstrip('-').replace('-', '_')}"
         if getattr(args, attr, None) is not None:
-            print(f"userlens: {flag} is coming soon ({roadmap})", file=sys.stderr)
+            print(f"user-explorer: {flag} is coming soon ({roadmap})", file=sys.stderr)
             return EXIT_OK
 
     options = PipelineOptions(
@@ -156,10 +156,10 @@ def main(argv: list[str] | None = None) -> int:
         result = run(options)
     except ReadError as e:
         msg = str(e)
-        print(f"userlens: {msg}", file=sys.stderr)
+        print(f"user-explorer: {msg}", file=sys.stderr)
         return EXIT_EMPTY if "empty" in msg.lower() else EXIT_OTHER
     except SchemaError as e:
-        print(f"userlens: schema error: {e}", file=sys.stderr)
+        print(f"user-explorer: schema error: {e}", file=sys.stderr)
         return EXIT_SCHEMA
 
     if args.quiet:
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     render(result.blobs, result.meta, out_path, open_browser=not args.no_open)
 
     print(
-        f"userlens: wrote {out_path} — "
+        f"user-explorer: wrote {out_path} — "
         f"{len(result.blobs)} users · {result.n_events} events · {result.elapsed_ms} ms",
         file=sys.stderr,
     )

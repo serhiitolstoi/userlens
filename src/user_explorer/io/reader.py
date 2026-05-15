@@ -48,7 +48,7 @@ def _read_parquet(path: Path) -> pl.DataFrame:
         return pl.read_parquet(path)
     except ImportError as e:
         raise ReadError(
-            "Reading Parquet requires pyarrow. Install with `pip install userlens[parquet]`."
+            "Reading Parquet requires pyarrow. Install with `pip install user-explorer[parquet]`."
         ) from e
 
 

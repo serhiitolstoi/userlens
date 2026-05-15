@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from userlens.mcp_server import (
+from user_explorer.mcp_server import (
     _load_file,
     analyze_user_impl,
     export_html_impl,
@@ -256,7 +256,7 @@ def test_export_html_with_filter(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def test_server_state_build(tmp_path: Path) -> None:
-    from userlens.server import _State
+    from user_explorer.server import _State
     out = tmp_path / "out.html"
     state = _State(Path(TINY), out)
     state.check_and_rebuild()
@@ -268,7 +268,7 @@ def test_server_state_build(tmp_path: Path) -> None:
 
 
 def test_server_state_blobs_populated(tmp_path: Path) -> None:
-    from userlens.server import _State
+    from user_explorer.server import _State
     out = tmp_path / "out.html"
     state = _State(Path(TINY), out)
     state.check_and_rebuild()

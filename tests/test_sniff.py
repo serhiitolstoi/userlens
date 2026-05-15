@@ -3,8 +3,8 @@ from __future__ import annotations
 import polars as pl
 import pytest
 
-from userlens.schema import sniff_schema
-from userlens.schema.sniff import SchemaError
+from user_explorer.schema import sniff_schema
+from user_explorer.schema.sniff import SchemaError
 
 
 def test_canonical_columns_resolved_by_alias() -> None:

@@ -40,16 +40,16 @@ psql $DATABASE_URL -c "\COPY (
 ```
 
 Column naming tips:
-- Prefix user-level columns with `user_` so userlens detects them as sidebar filters (`user_platform`, `user_country`).
+- Prefix user-level columns with `user_` so User Explorer detects them as sidebar filters (`user_platform`, `user_country`).
 - Flatten the JSONB properties you care about into named columns — they become inline event chips.
 
-### Run userlens
+### Run User Explorer
 
 ```
-userlens events_export.csv
+user-explorer events_export.csv
 ```
 
-userlens auto-maps `occurred_at` → `timestamp` and `event_type` → `event_name` via alias lookup.
+User Explorer auto-maps `occurred_at` → `timestamp` and `event_type` → `event_name` via alias lookup.
 
 ## Filtering to specific users
 
@@ -76,4 +76,4 @@ The export query with a 90-day window on an indexed table typically completes in
 
 ## Handling JSONB properties at scale
 
-Instead of flattening in SQL, export the raw JSONB as a string column and let userlens skip it (high-cardinality columns are auto-skipped with a warning). Flatten only the properties you want as chips.
+Instead of flattening in SQL, export the raw JSONB as a string column and let User Explorer skip it (high-cardinality columns are auto-skipped with a warning). Flatten only the properties you want as chips.

@@ -1,10 +1,10 @@
-"""userlens serve — file-watch HTTP server + optional JSON REST API.
+"""user-explorer serve — file-watch HTTP server + optional JSON REST API.
 
 Usage:
-    userlens serve events.csv                 # file-watch + static HTML on :7891
-    userlens serve events.csv --port 9000     # custom port
-    userlens serve events.csv --api           # also exposes JSON REST endpoints
-    userlens serve events.csv --no-open       # don't open browser
+    user-explorer serve events.csv                 # file-watch + static HTML on :7891
+    user-explorer serve events.csv --port 9000     # custom port
+    user-explorer serve events.csv --api           # also exposes JSON REST endpoints
+    user-explorer serve events.csv --no-open       # don't open browser
 
 Static mode:
     GET /            → serves the latest generated HTML (auto-regenerated on file change)
@@ -31,7 +31,7 @@ import webbrowser
 from pathlib import Path
 from typing import Any
 
-from userlens.mcp_server import (
+from user_explorer.mcp_server import (
     analyze_user_impl,
     export_html_impl,
     find_users_by_event_impl,
@@ -39,8 +39,8 @@ from userlens.mcp_server import (
     list_users_impl,
     summarize_cohort_impl,
 )
-from userlens.pipeline import PipelineOptions, run
-from userlens.viewer import render
+from user_explorer.pipeline import PipelineOptions, run
+from user_explorer.viewer import render
 
 _POLL_INTERVAL = 2.0  # seconds between mtime checks
 
@@ -228,12 +228,12 @@ def serve(
     out: Path | None = None,
 ) -> None:
     """Start the file-watch server. Blocks until Ctrl-C."""
-    out_path = out or Path(tempfile.mktemp(suffix=".html", prefix="userlens_"))
+    out_path = out or Path(tempfile.mktemp(suffix=".html", prefix="userexplorer_"))
 
     state = _State(events_path, out_path)
 
     # Initial build before server starts
-    print(f"userlens serve: watching {events_path}", file=sys.stderr)
+    print(f"user-explorer serve: watching {events_path}", file=sys.stderr)
     print("  building initial report…", file=sys.stderr, flush=True)
     state.check_and_rebuild()
 
@@ -259,6 +259,6 @@ def serve(
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\nuserlens serve: stopped.", file=sys.stderr)
+        print("\nuser-explorer serve: stopped.", file=sys.stderr)
     finally:
         httpd.server_close()

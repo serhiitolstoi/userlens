@@ -31,14 +31,14 @@ jobs:
         run: ruff check . && ruff format --check .
 
       - name: Type check (mypy)
-        run: mypy src/userlens
+        run: mypy src/user_explorer
 
       - name: Run tests
         run: pytest
 
       - name: Smoke test — quiet mode
         run: |
-          python -m userlens tests/fixtures/tiny.csv --no-open --quiet | python -c "
+          python -m user_explorer tests/fixtures/tiny.csv --no-open --quiet | python -c "
           import json, sys
           d = json.loads(sys.stdin.read())
           assert d['users'] == 3, f'expected 3 users, got {d[\"users\"]}'

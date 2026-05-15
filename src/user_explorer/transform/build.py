@@ -10,7 +10,7 @@ from typing import Any
 
 import polars as pl
 
-from userlens.schema.types import ResolvedSchema
+from user_explorer.schema.types import ResolvedSchema
 
 
 def normalize_dataframe(df: pl.DataFrame, schema: ResolvedSchema) -> pl.DataFrame:

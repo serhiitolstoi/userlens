@@ -15,7 +15,7 @@ import re
 
 import polars as pl
 
-from userlens.schema.types import ResolvedSchema
+from user_explorer.schema.types import ResolvedSchema
 
 _USER_PREFIX = re.compile(r"^(user_|u_)", re.IGNORECASE)
 

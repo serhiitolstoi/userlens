@@ -11,8 +11,8 @@ from typing import Any
 
 import polars as pl
 
-from userlens.derive.properties import extract_event_props
-from userlens.schema.types import ResolvedSchema
+from user_explorer.derive.properties import extract_event_props
+from user_explorer.schema.types import ResolvedSchema
 
 
 def derive_sessions(

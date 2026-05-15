@@ -35,7 +35,7 @@ def render(
     html = template.replace(_DATA_SENTINEL, data_json).replace(_META_SENTINEL, meta_json)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=out_path.parent, prefix=".userlens_", suffix=".html")
+    fd, tmp = tempfile.mkstemp(dir=out_path.parent, prefix=".userexplorer_", suffix=".html")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(html)

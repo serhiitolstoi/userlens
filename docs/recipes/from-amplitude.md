@@ -6,7 +6,7 @@
 
 Typical Amplitude CSV columns:
 
-| Amplitude column | userlens canonical |
+| Amplitude column | User Explorer canonical |
 |---|---|
 | `user_id` | `user_id` (direct match) |
 | `event_time` | `timestamp` |
@@ -14,18 +14,18 @@ Typical Amplitude CSV columns:
 | `session_id` | `session_id` (trusted directly) |
 | `device_id` | (use as `user_id` for anonymous) |
 
-## Run userlens
+## Run User Explorer
 
-Amplitude's columns match userlens aliases directly — no overrides needed for most exports:
-
-```
-userlens amplitude_export.csv
-```
-
-If userlens can't auto-detect (e.g. column names differ in your export config):
+Amplitude's columns match User Explorer aliases directly — no overrides needed for most exports:
 
 ```
-userlens amplitude_export.csv \
+user-explorer amplitude_export.csv
+```
+
+If User Explorer can't auto-detect (e.g. column names differ in your export config):
+
+```
+user-explorer amplitude_export.csv \
   --user-id user_id \
   --timestamp event_time \
   --event-name event_type
@@ -33,7 +33,7 @@ userlens amplitude_export.csv \
 
 ## Using session_id
 
-Amplitude exports include `session_id`. userlens detects and trusts it automatically — sessions won't be re-derived from gaps. You'll see exact Amplitude sessions in the timeline.
+Amplitude exports include `session_id`. User Explorer detects and trusts it automatically — sessions won't be re-derived from gaps. You'll see exact Amplitude sessions in the timeline.
 
 ## Merging multiple export files
 
@@ -46,7 +46,7 @@ tail -n +2 export_part1.csv >> merged.csv
 tail -n +2 export_part2.csv >> merged.csv
 # ... repeat for all parts
 
-userlens merged.csv
+user-explorer merged.csv
 ```
 
 Or with DuckDB:
@@ -59,6 +59,6 @@ COPY (
 
 ## Event properties
 
-Amplitude flattens event properties into columns prefixed with `event_properties.`. userlens picks them up as event property chips automatically.
+Amplitude flattens event properties into columns prefixed with `event_properties.`. User Explorer picks them up as event property chips automatically.
 
 User properties prefixed with `user_properties.` are constant per user and will be detected as attribute filters in the sidebar.

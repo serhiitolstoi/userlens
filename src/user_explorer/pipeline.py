@@ -22,18 +22,18 @@ from typing import Any
 
 import polars as pl
 
-from userlens.derive import (
+from user_explorer.derive import (
     build_attributes_meta,
     classify_extras,
     derive_attributes,
     derive_families,
     derive_sessions,
 )
-from userlens.io import read_events
-from userlens.io.reader import sample_for_sniff
-from userlens.schema import sniff_schema
-from userlens.schema.types import ResolvedSchema
-from userlens.transform import build_user_blobs, normalize_dataframe
+from user_explorer.io import read_events
+from user_explorer.io.reader import sample_for_sniff
+from user_explorer.schema import sniff_schema
+from user_explorer.schema.types import ResolvedSchema
+from user_explorer.transform import build_user_blobs, normalize_dataframe
 
 
 @dataclass(frozen=True)

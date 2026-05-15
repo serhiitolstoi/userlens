@@ -1,13 +1,13 @@
 # Input Contract
 
-userlens accepts a single flat event log. One row = one event.
+User Explorer accepts a single flat event log. One row = one event.
 
 ## Supported formats
 
 | Extension | Notes |
 |-----------|-------|
 | `.csv` | Standard comma-separated, UTF-8 |
-| `.parquet` | Requires `pip install userlens[parquet]` |
+| `.parquet` | Requires `pip install user-explorer[parquet]` |
 | `.json` | Array of objects (`[{...}, ...]`) |
 | `.jsonl` / `.ndjson` | One JSON object per line |
 
@@ -21,12 +21,12 @@ Three columns must be present (or resolvable via aliases):
 | `timestamp` | ts, time, datetime, event_time, occurred_at, created_at, _time |
 | `event_name` | event, name, action, type, event_type, track |
 
-Alias matching is case-insensitive. If a column name is ambiguous or absent, userlens exits with code 2 and suggests the appropriate override flag.
+Alias matching is case-insensitive. If a column name is ambiguous or absent, User Explorer exits with code 2 and suggests the appropriate override flag.
 
 ### Explicit overrides
 
 ```
-userlens events.csv --user-id uid --timestamp created_at --event-name action
+user-explorer events.csv --user-id uid --timestamp created_at --event-name action
 ```
 
 ## Optional columns
@@ -37,7 +37,7 @@ userlens events.csv --user-id uid --timestamp created_at --event-name action
 |----------------|--------------------|
 | `session_id` | sid, session, sess_id |
 
-If present, userlens trusts it directly. If absent, sessions are derived by splitting on gaps larger than `--session-gap` minutes (default: 30).
+If present, User Explorer trusts it directly. If absent, sessions are derived by splitting on gaps larger than `--session-gap` minutes (default: 30).
 
 ### User attributes
 
@@ -66,7 +66,7 @@ All timestamps are treated as UTC-naive. Mixed-timezone strings are parsed as-is
 
 ## Schema resolution output
 
-userlens always prints the resolved schema before processing:
+User Explorer always prints the resolved schema before processing:
 
 ```
 schema: user_id=uid  timestamp=created_at  event_name=action  session_id=(none)
@@ -89,7 +89,7 @@ Hint: pass --timestamp created_at
 
 ## Privacy note
 
-userlens embeds all event properties verbatim in the output HTML. The tool prints a reminder on every run:
+User Explorer embeds all event properties verbatim in the output HTML. The tool prints a reminder on every run:
 
 ```
 Note: output contains all event properties. Inspect before sharing.

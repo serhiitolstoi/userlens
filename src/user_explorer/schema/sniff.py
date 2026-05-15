@@ -16,8 +16,8 @@ from typing import Any
 
 import polars as pl
 
-from userlens.schema.aliases import find_canonical
-from userlens.schema.types import ResolvedSchema
+from user_explorer.schema.aliases import find_canonical
+from user_explorer.schema.types import ResolvedSchema
 
 SAMPLE_ROWS = 1000
 
