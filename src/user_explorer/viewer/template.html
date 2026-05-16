@@ -1091,6 +1091,7 @@ function renderHeatmap(u){
     const d=ts.slice(0,10);
     if(!dd[d]) dd[d]={total:0,fc:{},ec:{}};
     evs.forEach(([,name])=>{
+      if(highlightEvent && name!==highlightEvent) return; // filter heatmap to highlighted event
       const fam=famOf(name);
       dd[d].total++;
       dd[d].fc[fam]=(dd[d].fc[fam]||0)+1;
