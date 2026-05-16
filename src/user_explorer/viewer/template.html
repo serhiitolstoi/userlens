@@ -408,6 +408,8 @@ details[open] .sess-arrow{transform:rotate(90deg)}
   transition:.1s ease;
 }
 .erow:last-child{border-bottom:none}
+.erow.hl-ev{background:rgba(94,106,210,.13)!important;border-left:3px solid var(--accent)!important;border-radius:0 4px 4px 0;padding-left:5px;}
+[data-theme=dark] .erow.hl-ev{background:rgba(94,106,210,.22)!important;}
 .erow.match{background:var(--accent-bg);border-radius:4px;padding-left:6px;margin-left:-6px;margin-right:-6px;padding-right:6px}
 .erow.dim{opacity:.3}
 .etime{
@@ -713,7 +715,8 @@ let _tlHiddenIdx=0;
 let timeFilter=null;           // {from:Date,to:Date} or null
 let activePreset='all';
 const hiddenEvents=new Set();  // event names hidden from heatmap
-let soloEvent=null;            // single event name shown solo
+let highlightEvent=null;       // event name highlighted (soft — no filtering)
+let chipColorMap={};
 let tlSearchQ='';
 
 /* ── theme: light default ── */
@@ -950,7 +953,6 @@ function getFilteredView(u){
     const fevs=[];
     for(const ev of evs){
       const name=ev[1];
-      if(soloEvent && name!==soloEvent) continue;
       if(hiddenEvents.has(name)) continue;
       fevs.push(ev);
     }
@@ -972,11 +974,11 @@ function selectUser(uid){
   emptyEl.style.display='none'; detailEl.style.display='block';
   // reset per-user state
   timeFilter=null; activePreset='all';
-  hiddenEvents.clear(); soloEvent=null;
+  hiddenEvents.clear(); highlightEvent=null;
   tlSearchQ='';
   for(const k in _tlHidden) delete _tlHidden[k]; _tlHiddenIdx=0;
-  document.getElementById('range-from').value='';
-  document.getElementById('range-to').value='';
+  if(u){const fromD=new Date(parseTs(u.fs)),toD=new Date(parseTs(u.ls)); document.getElementById('range-from').value=fmtDateInput(fromD); document.getElementById('range-to').value=fmtDateInput(toD);}
+  else{document.getElementById('range-from').value=''; document.getElementById('range-to').value='';}
   syncRangeButtons();
   rerenderAll(u);
   switchTab('pane-tl');
@@ -1035,6 +1037,9 @@ document.getElementById('range-presets').addEventListener('click',e=>{
   const u=DATA.find(x=>x.u===selUid); if(!u) return;
   if(r==='all'){
     timeFilter=null;
+    const fromD=new Date(parseTs(u.fs)), toD=new Date(parseTs(u.ls));
+    document.getElementById('range-from').value=fmtDateInput(fromD);
+    document.getElementById('range-to').value=fmtDateInput(toD);
   }else{
     const days=parseInt(r,10);
     const lastTs=parseTs(u.ls);
@@ -1042,8 +1047,10 @@ document.getElementById('range-presets').addEventListener('click',e=>{
     const to=new Date(lastTs);
     timeFilter={from:new Date(from.getFullYear(),from.getMonth(),from.getDate()),to:new Date(to.getFullYear(),to.getMonth(),to.getDate())};
   }
-  document.getElementById('range-from').value=timeFilter?fmtDateInput(timeFilter.from):'';
-  document.getElementById('range-to').value=timeFilter?fmtDateInput(timeFilter.to):'';
+  if(timeFilter){
+    document.getElementById('range-from').value=fmtDateInput(timeFilter.from);
+    document.getElementById('range-to').value=fmtDateInput(timeFilter.to);
+  }
   syncRangeButtons();
   rerenderAll(u);
 });
@@ -1093,12 +1100,14 @@ function renderHeatmap(u){
   });
   Object.values(dd).forEach(day=>{
     day.dom=Object.entries(day.fc).sort((a,b)=>b[1]-a[1])[0]?.[0]||'other';
+    const topEv=Object.entries(day.ec).sort((a,b)=>b[1].cnt-a[1].cnt)[0];
+    day.top1=topEv?topEv[0]:null;
     day.top=Object.entries(day.ec).map(([n,i])=>({name:n,fam:i.fam,cnt:i.cnt})).sort((a,b)=>b.cnt-a.cnt).slice(0,8);
   });
   const days=Object.keys(dd).sort();
   // event-chip strip uses full-event taxonomy of the visible (time-range-filtered) view
   renderEventChips(u);
-  document.getElementById('hm-mode').innerHTML = soloEvent ? `solo: <b>${esc(soloEvent)}</b>` : (hiddenEvents.size?`<b>${hiddenEvents.size}</b> hidden`:``);
+  document.getElementById('hm-mode').innerHTML = highlightEvent ? `highlighting: <b>${esc(highlightEvent)}</b>` : (hiddenEvents.size?`<b>${hiddenEvents.size}</b> hidden`:``);
   if(!days.length){container.innerHTML='<p class="hm-empty">No activity in this range</p>';return;}
   const maxC=Math.max(...Object.values(dd).map(d=>d.total),1);
   const t0=new Date(days[0]+'T12:00:00'), t1=new Date(days[days.length-1]+'T12:00:00');
@@ -1110,16 +1119,16 @@ function renderHeatmap(u){
     const w=[];
     for(let d=0;d<7;d++){
       const k=cur.toISOString().slice(0,10), i=dd[k];
-      w.push({date:k,total:i?i.total:0,dom:i?i.dom:null});
+      w.push({date:k,total:i?i.total:0,dom:i?i.dom:null,top1:i?i.top1:null});
       cur.setDate(cur.getDate()+1);
     }
     weeks.push(w);
   }
-  function fill(total,dom){
+  function fill(total,dom,top1){
     if(!total) return getComputedStyle(document.documentElement).getPropertyValue('--empty-cell').trim()||(dark?'#1a1a20':'#eaeaee');
-    const c=featureColor(dom||'other');
-    // c is hsl(...) — apply alpha via wrapper
-    return c.replace('hsl(','hsla(').replace(')',` / ${(0.20+0.80*Math.pow(total/maxC,0.55)).toFixed(2)})`);
+    const alpha=(0.20+0.80*Math.pow(total/maxC,0.55)).toFixed(2);
+    const c=chipColorMap[top1]||featureColor(dom||'other');
+    return c.replace('hsl(','hsla(').replace(')',` / ${alpha})`);
   }
   let lastM=-1;
   const axisColor=dark?'#6e6e7a':'#a1a1aa';
@@ -1131,8 +1140,8 @@ function renderHeatmap(u){
   const dl=['S','M','T','W','T','F','S'].map((l,i)=>
     (i===1||i===3||i===5)?`<text x="${OX-4}" y="${OY+i*(C+G)+C-2}" fill="${axisColor}" font-size="9" text-anchor="end" font-family="ui-monospace,monospace">${l}</text>`:''
   ).join('');
-  const cells=weeks.map((w,wi)=>w.map(({date,total,dom},di)=>
-    `<rect x="${OX+wi*(C+G)}" y="${OY+di*(C+G)}" width="${C}" height="${C}" rx="2" fill="${fill(total,dom)}" data-date="${date}" style="cursor:${total?'pointer':'default'}"/>`
+  const cells=weeks.map((w,wi)=>w.map(({date,total,dom,top1},di)=>
+    `<rect x="${OX+wi*(C+G)}" y="${OY+di*(C+G)}" width="${C}" height="${C}" rx="2" fill="${fill(total,dom,top1)}" data-date="${date}" style="cursor:${total?'pointer':'default'}"/>`
   ).join('')).join('');
   const W=OX+weeks.length*(C+G)+4, H=OY+7*(C+G)+4;
   container.innerHTML=`<div class="hm-wrap"><svg id="hm-svg" width="${W}" height="${H}" style="display:block">${ml}${dl}${cells}</svg></div>`;
@@ -1154,7 +1163,15 @@ function renderHeatmap(u){
   svg.addEventListener('mouseleave',()=>{tipDelayHide();tipTgt=null;});
   svg.addEventListener('click',e=>{
     const r=e.target.closest?.('rect[data-date]'); if(!r||!dd[r.dataset.date]) return;
-    tipHide(); jumpToSessionDate(r.dataset.date);
+    tipHide();
+    const d=r.dataset.date;
+    const dt=new Date(d+'T12:00:00');
+    timeFilter={from:new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()),to:new Date(dt.getFullYear(),dt.getMonth(),dt.getDate())};
+    document.getElementById('range-from').value=fmtDateInput(timeFilter.from);
+    document.getElementById('range-to').value=fmtDateInput(timeFilter.to);
+    activePreset='custom'; syncRangeButtons();
+    const uClick=DATA.find(x=>x.u===selUid); if(uClick) rerenderAll(uClick);
+    setTimeout(()=>switchTab('pane-tl'),30);
   });
 }
 
@@ -1164,8 +1181,10 @@ function renderEventChips(u){
   v.sessions.forEach(([,,evs])=>evs.forEach(([,name])=>counts[name]=(counts[name]||0)+1));
   // Always include hidden + solo in the candidate set so user can manage them
   hiddenEvents.forEach(n=>{if(!(n in counts)) counts[n]=0;});
-  if(soloEvent && !(soloEvent in counts)) counts[soloEvent]=0;
+  if(highlightEvent && !(highlightEvent in counts)) counts[highlightEvent]=0;
   const ranked=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  chipColorMap={};
+  ranked.slice(0,9).forEach(([n],i)=>{chipColorMap[n]=`hsl(${HUE_PALETTE[i]} 60% 52%)`;});
   const TOP=9;
   const shown=ranked.slice(0,TOP);
   const rest=ranked.slice(TOP);
@@ -1174,17 +1193,17 @@ function renderEventChips(u){
   const items=shown.map(([n,c])=>{
     const fam=famOf(n);
     const color=featureColor(fam);
-    const isSolo=soloEvent===n;
+    const isSolo=highlightEvent===n;
     const isHidden=hiddenEvents.has(n);
     if(isHidden) return '';
     return `<span class="evchip${isSolo?' solo':''}" data-name="${esc(n)}"><span class="evchip-sw" style="background:${color}"></span>${esc(n)}<span class="evchip-cnt">${c}</span><span class="evchip-x" data-x="${esc(n)}" title="hide">×</span></span>`;
   }).filter(Boolean).join('');
   let restHtml='';
-  if(otherCnt>0 && !soloEvent){
+  if(otherCnt>0){
     restHtml=`<span class="evchip" data-name="__other__" title="${esc(rest.map(([n])=>n).join(', '))}"><span class="evchip-sw" style="background:${featureColor('other')}"></span>Other<span class="evchip-cnt">${otherCnt}</span></span>`;
   }
   const restoreBtn = hiddenEvents.size ? `<button class="evchip-restore" id="evchip-restore">↺ show ${hiddenEvents.size} hidden</button>` : '';
-  const clearSolo = soloEvent ? `<button class="evchip-restore" id="evchip-clear-solo">clear solo</button>` : '';
+  const clearSolo = highlightEvent ? `<button class="evchip-restore" id="evchip-clear-solo">clear highlight</button>` : '';
   el.innerHTML = items + restHtml + restoreBtn + clearSolo;
 
   el.querySelectorAll('.evchip').forEach(chip=>{
@@ -1192,8 +1211,8 @@ function renderEventChips(u){
       if(e.target.closest('.evchip-x')) return;
       const n=chip.dataset.name;
       if(n==='__other__') return;
-      // toggle solo
-      soloEvent = soloEvent===n ? null : n;
+      // toggle highlight
+      highlightEvent = highlightEvent===n ? null : n;
       const u=DATA.find(x=>x.u===selUid); if(u) rerenderAll(u);
     });
   });
@@ -1202,7 +1221,7 @@ function renderEventChips(u){
       e.stopPropagation();
       const n=x.dataset.x;
       hiddenEvents.add(n);
-      if(soloEvent===n) soloEvent=null;
+      if(highlightEvent===n) highlightEvent=null;
       const u=DATA.find(x=>x.u===selUid); if(u) rerenderAll(u);
     });
   });
@@ -1213,8 +1232,14 @@ function renderEventChips(u){
   });
   const cs=document.getElementById('evchip-clear-solo');
   if(cs) cs.addEventListener('click',()=>{
-    soloEvent=null;
+    highlightEvent=null;
     const u=DATA.find(x=>x.u===selUid); if(u) rerenderAll(u);
+  });
+}
+
+function applyTlHighlight(){
+  document.querySelectorAll('#pane-tl .erow').forEach(row=>{
+    row.classList.toggle('hl-ev',!!highlightEvent&&row.dataset.event===highlightEvent);
   });
 }
 
@@ -1308,6 +1333,7 @@ function renderTimeline(u){
     inp.addEventListener('keydown',e=>{if(e.key==='Escape'){tlSearchQ='';inp.value='';applyTlSearch();}});
   }
   applyTlSearch();
+  applyTlHighlight();
 }
 
 function applyTlSearch(){
@@ -1494,74 +1520,63 @@ function renderSessions(u){
 function renderFlow(u){
   const container=document.getElementById('pane-fl');
   const v=getFilteredView(u);
-  // Build signatures (3 first + ⋯ +N more + 2 last)
-  const FIRST=3, LAST=2;
-  function sig(evs){
-    const names=evs.map(e=>e[1]);
-    if(names.length<=FIRST+LAST) return {parts:names,gap:0};
-    const head=names.slice(0,FIRST);
-    const tail=names.slice(-LAST);
-    const gap=names.length-FIRST-LAST;
-    return {parts:[...head,null,...tail],gap};
-  }
-  const groups={};
-  v.sessions.forEach(([sid,ts,evs])=>{
-    if(evs.length<2) return;
-    const s=sig(evs);
-    const key=s.parts.map(p=>p===null?`__g${s.gap}__`:p).join('\x1f');
-    if(!groups[key]) groups[key]={parts:s.parts,gap:s.gap,count:0,sessions:[]};
-    groups[key].count++;
-    groups[key].sessions.push({sid,ts,evs});
+  const pairs={};
+  let totalTrans=0;
+  v.sessions.forEach(([,,evs])=>{
+    for(let i=0;i<evs.length-1;i++){
+      const a=evs[i][1],b=evs[i+1][1];
+      const key=a+'\x1f'+b;
+      if(!pairs[key]) pairs[key]={a,b,count:0};
+      pairs[key].count++;
+      totalTrans++;
+    }
   });
-  const ranked=Object.values(groups).sort((a,b)=>b.count-a.count);
+  const ranked=Object.values(pairs).sort((a,b)=>b.count-a.count);
   if(!ranked.length){container.innerHTML='<div class="fp-empty">Not enough events for flow analysis</div>';return;}
-  const top=ranked.slice(0,12);
-  const totalSess=v.sessions.length;
-  const topCoverage=totalSess?Math.round((top[0].count/totalSess)*100):0;
+  const top=ranked.slice(0,15);
   const maxCnt=top[0].count;
   function pill(name){
     const fam=famOf(name);
     return `<span class="fp-pill fam-${CSS.escape(fam)}">${esc(name)}</span>`;
   }
   const rowsHtml=top.map((g,i)=>{
-    const chain=g.parts.map(p=>p===null?`<span class="fp-gap">⋯ +${g.gap} more</span>`:pill(p)).reduce((acc,el,idx,arr)=>{
-      acc.push(el);
-      if(idx<arr.length-1) acc.push('<span class="fp-arrow">→</span>');
-      return acc;
-    },[]).join('');
-    const pct=totalSess?Math.round(g.count/totalSess*100):0;
+    const pct=totalTrans?Math.round(g.count/totalTrans*100):0;
     return `<div class="fp-row" data-idx="${i}">
       <div class="fp-row-head">
         <span class="fp-toggle">▶</span>
-        <div class="fp-chain">${chain}</div>
+        <div class="fp-chain">${pill(g.a)}<span class="fp-arrow">→</span>${pill(g.b)}</div>
         <div class="fp-bar"><div class="fp-bar-fg" style="width:${Math.round(g.count/maxCnt*100)}%"></div></div>
-        <span class="fp-cnt">${g.count} · ${pct}%</span>
+        <span class="fp-cnt">${g.count.toLocaleString()} · ${pct}%</span>
       </div>
       <div class="fp-drawer"></div>
     </div>`;
   }).join('');
-  container.innerHTML=`<div class="fp-head"><b>${ranked.length}</b> distinct path${ranked.length!==1?'s':''} · top path covers <b>${topCoverage}%</b> of ${totalSess} session${totalSess!==1?'s':''}</div><div class="fp-panel">${rowsHtml}</div>`;
-  // Wire up expand/collapse
+  const uniq=ranked.length;
+  container.innerHTML=`<div class="fp-head"><b>${uniq.toLocaleString()}</b> unique transition${uniq!==1?'s':''} · top: <b>${esc(top[0].a)} → ${esc(top[0].b)}</b> (${top[0].count.toLocaleString()}×)</div><div class="fp-panel">${rowsHtml}</div>`;
   container.querySelectorAll('.fp-row').forEach(row=>{
     const idx=+row.dataset.idx;
-    const group=top[idx];
+    const g=top[idx];
     row.querySelector('.fp-row-head').addEventListener('click',()=>{
       const wasOpen=row.classList.toggle('open');
       const drawer=row.querySelector('.fp-drawer');
-      if(wasOpen && !drawer.dataset.built){
+      if(wasOpen&&!drawer.dataset.built){
         drawer.dataset.built='1';
-        const examples=group.sessions.slice(0,3).map(s=>{
-          const fmt=fmtTs(s.ts);
-          const evHtml=s.evs.map(ev=>renderEventRow(ev,s.sid,0)).join('');
+        const matching=v.sessions.filter(([,,evs])=>{
+          for(let i=0;i<evs.length-1;i++){if(evs[i][1]===g.a&&evs[i+1][1]===g.b)return true;}
+          return false;
+        }).slice(0,3);
+        const moreNote=`<div class="fp-drawer-h">showing ${matching.length} of ${g.count} session${g.count!==1?'s':''} with this transition</div>`;
+        const examples=matching.map(([sid,ts,evs])=>{
+          const fmt=fmtTs(ts);
+          const evHtml=evs.map(ev=>renderEventRow(ev,sid,0)).join('');
           return `<div class="fp-mini-sess">
-            <div class="fp-mini-head"><b>${esc(fmt.date)}</b> <span style="color:var(--text-3)">${esc(fmt.time)}</span> <span style="color:var(--text-3)">·</span> <span style="color:var(--text-3)">${s.evs.length} events${sessDur(s.evs)?' · '+sessDur(s.evs):''}</span><button class="fp-mini-jump" data-sid="${esc(s.sid)}">open in timeline →</button></div>
+            <div class="fp-mini-head"><b>${esc(fmt.date)}</b> <span style="color:var(--text-3)">${esc(fmt.time)}</span> · <span style="color:var(--text-3)">${evs.length} events${sessDur(evs)?' · '+sessDur(evs):''}</span><button class="fp-mini-jump" data-sid="${esc(sid)}">open in timeline →</button></div>
             ${evHtml}
           </div>`;
         }).join('');
-        const moreNote = group.sessions.length>3 ? `<div class="fp-drawer-h">showing 3 of ${group.sessions.length} matching sessions</div>` : `<div class="fp-drawer-h">${group.sessions.length} matching session${group.sessions.length!==1?'s':''}</div>`;
-        drawer.innerHTML = moreNote + examples;
+        drawer.innerHTML=moreNote+examples;
         drawer.querySelectorAll('.fp-mini-jump').forEach(b=>b.addEventListener('click',e=>{
-          e.stopPropagation(); jumpToSession(b.dataset.sid);
+          e.stopPropagation();jumpToSession(b.dataset.sid);
         }));
       }
     });
