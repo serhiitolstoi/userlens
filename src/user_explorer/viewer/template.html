@@ -1131,12 +1131,13 @@ function renderHeatmap(u){
     const c=chipColorMap[top1]||featureColor(dom||'other');
     return c.replace('hsl(','hsla(').replace(')',` / ${alpha})`);
   }
-  let lastM=-1;
+  let lastM=-1, lastWi=-100;
   const axisColor=dark?'#6e6e7a':'#8e8e9c';
   const textColor=dark?'#e6e6ea':'#15151a';
   const ml=weeks.map((w,wi)=>{
     const m=new Date(w[0].date+'T12:00:00').getMonth();
-    if(m===lastM) return ''; lastM=m;
+    if(m===lastM || wi-lastWi<3) return '';
+    lastM=m; lastWi=wi;
     return `<text x="${OX+wi*(C+G)}" y="17" fill="${textColor}" font-size="12" font-weight="600" font-family="-apple-system,system-ui,Helvetica,sans-serif">${MONTHS[m]}</text>`;
   }).join('');
   const DAYLABELS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -1167,14 +1168,7 @@ function renderHeatmap(u){
   svg.addEventListener('click',e=>{
     const r=e.target.closest?.('rect[data-date]'); if(!r||!dd[r.dataset.date]) return;
     tipHide();
-    const d=r.dataset.date;
-    const dt=new Date(d+'T12:00:00');
-    timeFilter={from:new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()),to:new Date(dt.getFullYear(),dt.getMonth(),dt.getDate())};
-    document.getElementById('range-from').value=fmtDateInput(timeFilter.from);
-    document.getElementById('range-to').value=fmtDateInput(timeFilter.to);
-    activePreset='custom'; syncRangeButtons();
-    const uClick=DATA.find(x=>x.u===selUid); if(uClick) rerenderAll(uClick);
-    setTimeout(()=>switchTab('pane-tl'),30);
+    jumpToSessionDate(r.dataset.date);
   });
 }
 
