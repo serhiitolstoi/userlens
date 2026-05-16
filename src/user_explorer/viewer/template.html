@@ -1114,7 +1114,7 @@ function renderHeatmap(u){
   const t0=new Date(days[0]+'T12:00:00'), t1=new Date(days[days.length-1]+'T12:00:00');
   const start=new Date(t0); start.setDate(start.getDate()-start.getDay());
   const end=new Date(t1); end.setDate(end.getDate()+(6-end.getDay()));
-  const C=12,G=3,OX=22,OY=18, weeks=[];
+  const C=12,G=3,OX=40,OY=26, weeks=[];
   const cur=new Date(start);
   while(cur<=end){
     const w=[];
@@ -1132,14 +1132,16 @@ function renderHeatmap(u){
     return c.replace('hsl(','hsla(').replace(')',` / ${alpha})`);
   }
   let lastM=-1;
-  const axisColor=dark?'#6e6e7a':'#a1a1aa';
+  const axisColor=dark?'#6e6e7a':'#8e8e9c';
+  const textColor=dark?'#e6e6ea':'#15151a';
   const ml=weeks.map((w,wi)=>{
     const m=new Date(w[0].date+'T12:00:00').getMonth();
     if(m===lastM) return ''; lastM=m;
-    return `<text x="${OX+wi*(C+G)}" y="11" fill="${axisColor}" font-size="9" font-family="ui-monospace,monospace">${MONTHS[m]}</text>`;
+    return `<text x="${OX+wi*(C+G)}" y="17" fill="${textColor}" font-size="12" font-weight="600" font-family="-apple-system,system-ui,Helvetica,sans-serif">${MONTHS[m]}</text>`;
   }).join('');
-  const dl=['S','M','T','W','T','F','S'].map((l,i)=>
-    (i===1||i===3||i===5)?`<text x="${OX-4}" y="${OY+i*(C+G)+C-2}" fill="${axisColor}" font-size="9" text-anchor="end" font-family="ui-monospace,monospace">${l}</text>`:''
+  const DAYLABELS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dl=DAYLABELS.map((l,i)=>
+    `<text x="${OX-6}" y="${OY+i*(C+G)+C-2}" fill="${axisColor}" font-size="9" text-anchor="end" font-family="-apple-system,system-ui,Helvetica,sans-serif">${l}</text>`
   ).join('');
   const cells=weeks.map((w,wi)=>w.map(({date,total,dom,top1},di)=>
     `<rect x="${OX+wi*(C+G)}" y="${OY+di*(C+G)}" width="${C}" height="${C}" rx="2" fill="${fill(total,dom,top1)}" data-date="${date}" style="cursor:${total?'pointer':'default'}"/>`
@@ -1155,7 +1157,7 @@ function renderHeatmap(u){
     const dp=r.dataset.date.split('-');
     const date=r.dataset.date;
     const evRows=info.top.map(({name,fam,cnt})=>{
-      const c=featureColor(fam);
+      const c=chipColorMap[name]||featureColor(fam);
       return `<button class="tip-row tip-evbtn" data-date="${esc(date)}" data-name="${esc(name)}"><span class="tip-pill" style="background:${c.replace('hsl(','hsla(').replace(')',' / 0.18)')};color:${c};border-color:${c.replace('hsl(','hsla(').replace(')',' / 0.5)')}">${esc(fam)}</span><span class="tip-name">${esc(name)}</span><span class="tip-cnt">${cnt}</span></button>`;
     }).join('');
     tipShow(`<div class="tip-h">${MONTHS[parseInt(dp[1])-1]} ${parseInt(dp[2])}, ${dp[0]}</div><div class="tip-sub">${info.total} event${info.total!==1?'s':''}</div>${evRows}<div class="tip-hint">click an event to jump to it</div>`);
@@ -1192,8 +1194,7 @@ function renderEventChips(u){
   const otherCnt=rest.reduce((s,[,c])=>s+c,0);
   const el=document.getElementById('evchips');
   const items=shown.map(([n,c])=>{
-    const fam=famOf(n);
-    const color=featureColor(fam);
+    const color=chipColorMap[n]||featureColor(famOf(n));
     const isSolo=highlightEvent===n;
     const isHidden=hiddenEvents.has(n);
     if(isHidden) return '';
