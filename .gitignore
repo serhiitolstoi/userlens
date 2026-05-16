@@ -13,4 +13,4 @@ venv/
 .pytest_cache/
 userlens.html
 *.html
-!src/userlens/viewer/template.html
+!src/user_explorer/viewer/template.html
