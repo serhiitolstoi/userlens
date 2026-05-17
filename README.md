@@ -107,7 +107,8 @@ pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.
 **Claude Code** — run once in terminal:
 
 ```bash
-claude mcp add user-explorer -- python3 -m user_explorer mcp
+# --scope user makes it available in every Claude session (any folder)
+claude mcp add user-explorer --scope user -- python3 -m user_explorer mcp
 ```
 
 Verify:
@@ -134,34 +135,44 @@ Restart Cursor after saving.
 
 ### Step 3 — Use it
 
-Ask Claude or Cursor in natural language:
+Ask Claude or Cursor in natural language — no need to mention "user-explorer":
 
 ```
-List users from events.csv
-Analyze user usr_alex_chen from events.csv
-Export an HTML report for pro users from events.csv
+Analyze events.csv
+Generate a user report from events.csv         ← uses quick_report, opens browser
+Show me the top users in events.csv
+Deep-dive on usr_alex_chen from events.csv
+Export a report for just my pro users from events.csv
 ```
 
 **Available tools:**
 
 | Tool | What it does |
 |---|---|
+| `quick_report` ⭐ | One-shot: parse → render → open in browser. Default for "analyze this CSV" |
 | `list_users` | List users with power scores, filterable by attribute |
 | `analyze_user` | Full session timeline + insights for one user |
 | `get_event_taxonomy` | Event families, top events, schema |
 | `summarize_cohort` | Aggregate stats for a filtered segment |
 | `find_users_by_event` | Find users who fired a specific event (substring match) |
-| `export_html` | Generate a focused HTML report for selected users |
+| `export_html` | Build a focused HTML report for a scoped subset of users |
 
-**Agent workflow example:**
+**Happy path (90% of requests):**
 
 ```
-1. list_users(file, sort_by="power_score", filters='{"user_plan":"pro"}')
+quick_report(file)   ← parses, renders, auto-opens the browser, returns a summary
+```
+
+**Scoped workflow:**
+
+```
+1. list_users(file, sort_by="events", filters='{"user_plan":"pro"}')
 2. analyze_user(file, "usr_alex_chen")   ← deep-dive on a specific user
 3. export_html(file, "report.html", user_ids=["usr_alex_chen", "usr_omar_f"])
 ```
 
-The last step produces a standard User Explorer HTML with only the curated subset.
+Both `quick_report` and `export_html` open the generated HTML in your browser
+automatically — no manual download step.
 
 ## Recipes
 

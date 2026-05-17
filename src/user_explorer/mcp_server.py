@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import statistics
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -11,6 +13,20 @@ from typing import Any
 from user_explorer.insights import extract_insights
 from user_explorer.pipeline import PipelineOptions, run
 from user_explorer.viewer import render
+
+
+def _open_in_browser(path: Path) -> bool:
+    """Best-effort cross-platform file open. Returns True if launch succeeded."""
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", str(path)])
+        elif sys.platform.startswith("win"):
+            subprocess.Popen(["cmd", "/c", "start", "", str(path)], shell=False)
+        else:
+            subprocess.Popen(["xdg-open", str(path)])
+        return True
+    except (OSError, FileNotFoundError):
+        return False
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -312,10 +328,12 @@ def export_html_impl(
     output: str,
     user_ids: list[str] | None = None,
     filters: str = "{}",
+    auto_open: bool = True,
 ) -> dict[str, Any]:
     """Render an HTML report for a selected subset of users.
 
     Filters are applied first, then user_ids (if provided) further restrict the set.
+    When *auto_open* is True (default) the resulting file is opened in the user's browser.
     """
     filtered = _apply_filters(blobs, filters)
 
@@ -329,15 +347,70 @@ def export_html_impl(
     if not filtered:
         return {"error": "No users matched the given filters/user_ids"}
 
-    out_path = Path(output)
+    out_path = Path(output).resolve()
     render(filtered, meta, out_path, open_browser=False)
 
+    opened = _open_in_browser(out_path) if auto_open else False
+
     return {
-        "output": str(out_path.resolve()),
+        "output": str(out_path),
+        "opened_in_browser": opened,
         "users_included": len(filtered),
         "user_ids": [b["u"] for b in filtered],
         "total_events": sum(b.get("te", 0) for b in filtered),
         "size_bytes": out_path.stat().st_size,
+    }
+
+
+def quick_report_impl(
+    blobs: _Blobs,
+    meta: dict[str, Any],
+    output: str | None = None,
+    filters: str = "{}",
+) -> dict[str, Any]:
+    """One-shot: build the report, open it, return a compact summary of what's inside.
+
+    This is the happy-path tool when the user just says "analyze this CSV".
+    """
+    filtered = _apply_filters(blobs, filters)
+    if not filtered:
+        return {"error": "No users matched the given filters"}
+
+    # Sensible default output path: alongside the events file if we can infer it,
+    # otherwise the current working directory.
+    out_path = Path(output).resolve() if output else (Path.cwd() / "userexplorer_report.html")
+    render(filtered, meta, out_path, open_browser=False)
+    opened = _open_in_browser(out_path)
+
+    # Compact preview — top 5 users by events, top 5 events overall
+    top_users = sorted(filtered, key=lambda b: b.get("te", 0), reverse=True)[:5]
+    event_counter: Counter[str] = Counter()
+    for b in filtered:
+        for s in b.get("s", []):
+            evs: list[Any] = s[2] if len(s) > 2 else []
+            for e in evs:
+                if len(e) > 1:
+                    event_counter[str(e[1])] += 1
+
+    return {
+        "output": str(out_path),
+        "opened_in_browser": opened,
+        "users_included": len(filtered),
+        "total_events": sum(b.get("te", 0) for b in filtered),
+        "size_bytes": out_path.stat().st_size,
+        "top_users": [
+            {
+                "user_id": b["u"],
+                "events": b.get("te", 0),
+                "sessions": b.get("sn", 0),
+            }
+            for b in top_users
+        ],
+        "top_events": [{"name": n, "count": c} for n, c in event_counter.most_common(5)],
+        "hint": (
+            "Report opened in browser." if opened
+            else f"Could not auto-open. Open manually: {out_path}"
+        ),
     }
 
 
@@ -376,13 +449,65 @@ def find_users_by_event_impl(
 # ---------------------------------------------------------------------------
 
 
+_SERVER_INSTRUCTIONS = """\
+User Explorer — analyze product-analytics event data from CSV / JSON / Parquet files.
+
+USE THIS SERVER WHENEVER THE USER:
+  • Mentions a CSV/JSON/Parquet file of events, sessions, or user actions
+  • Asks to analyze, explore, or understand user behavior
+  • Wants to find power users, drop-off points, or feature adoption
+  • Mentions Amplitude / Mixpanel / Segment / GA4 / Heap exports
+  • Wants an HTML report, dashboard, or visualization of users
+  • Asks "who are my top users", "what do users do", "explore this data"
+
+PREFERRED FIRST CALL:
+  quick_report(file)  —  one-shot pipeline: parses the file, builds an interactive
+                         HTML report, opens it in the user's browser, and returns
+                         a compact summary. Use this unless the user asks for
+                         something specific (filtering, single-user drill-down).
+
+DRILL-DOWN TOOLS (use when quick_report isn't enough):
+  list_users           — browse all users with stats and filters
+  analyze_user         — full timeline + insights for one user
+  find_users_by_event  — search users who fired a specific event
+  summarize_cohort     — aggregate stats for a filtered segment
+  get_event_taxonomy   — schema, event families, top events
+  export_html          — build a focused HTML report for selected users
+
+All tools accept the same `file` argument (absolute path to the events file).
+"""
+
+
 def main_mcp(events_file: str | None = None) -> None:
     if not _MCP_AVAILABLE:
         raise ImportError(
             "mcp package not installed. Install with: pip install 'user-explorer[mcp]'"
         )
 
-    mcp = FastMCP("user-explorer")
+    mcp = FastMCP("user-explorer", instructions=_SERVER_INSTRUCTIONS)
+
+    @mcp.tool()
+    def quick_report(
+        file: str,
+        output: str | None = None,
+        filters: str = "{}",
+    ) -> dict[str, Any]:
+        """One-shot: build an interactive HTML report from an events file and open it.
+
+        This is the preferred tool for the common "analyze my data" / "show me what's
+        in this CSV" request. It parses the file, generates the full User Explorer HTML
+        (heatmap, sessions, timeline, flow), opens it in the user's browser, and returns
+        a compact summary (top users, top events) so the agent can narrate the result.
+
+        Use this FIRST unless the user explicitly asks for a filtered/scoped report.
+
+        Args:
+            file: Absolute path to the events file (CSV/JSON/Parquet).
+            output: Optional output HTML path. Defaults to ./userexplorer_report.html.
+            filters: Optional JSON attribute filters e.g. '{"user_plan": "pro"}'.
+        """
+        blobs, meta = _load_file(file)
+        return quick_report_impl(blobs, meta, output=output, filters=filters)
 
     @mcp.tool()
     def list_users(
@@ -391,7 +516,10 @@ def main_mcp(events_file: str | None = None) -> None:
         sort_by: str = "events",
         filters: str = "{}",
     ) -> dict[str, Any]:
-        """List users from an events file with summary stats.
+        """List users from an events file with summary stats — events, sessions, attributes.
+
+        Use when the user asks to browse, list, or filter users. Triggers:
+        "show me users", "list users", "who are my users", "filter by plan".
 
         Args:
             file: Path to events file (CSV/JSON/Parquet).
@@ -404,7 +532,10 @@ def main_mcp(events_file: str | None = None) -> None:
 
     @mcp.tool()
     def analyze_user(file: str, user_id: str) -> dict[str, Any]:
-        """Full analysis of a single user: stats, insights, sessions, top events.
+        """Full drill-down on one user: stats, insights, every session, every event.
+
+        Use when the user names a specific user_id or asks "what does X do",
+        "tell me about user Y", "deep-dive on this user".
 
         Args:
             file: Path to events file.
@@ -415,7 +546,10 @@ def main_mcp(events_file: str | None = None) -> None:
 
     @mcp.tool()
     def get_event_taxonomy(file: str) -> dict[str, Any]:
-        """Return event schema, family definitions, and top events.
+        """Return event schema, family definitions, and the top events across all users.
+
+        Use to orient yourself in a new dataset before drill-down — answers
+        "what events are in this file" / "what does this data look like".
 
         Args:
             file: Path to events file.
@@ -425,7 +559,10 @@ def main_mcp(events_file: str | None = None) -> None:
 
     @mcp.tool()
     def summarize_cohort(file: str, filters: str = "{}") -> dict[str, Any]:
-        """Cohort-level summary with optional attribute filters.
+        """Cohort-level aggregate stats with optional attribute filters.
+
+        Use for "how does cohort X behave", "compare pro vs free users",
+        "what's the median session count for US users".
 
         Args:
             file: Path to events file.
@@ -441,7 +578,10 @@ def main_mcp(events_file: str | None = None) -> None:
         min_occurrences: int = 1,
         limit: int = 20,
     ) -> dict[str, Any]:
-        """Find users who triggered events matching a substring pattern (case-insensitive).
+        """Find users who triggered events matching a substring (case-insensitive).
+
+        Use for "who used feature X", "find users that hit checkout",
+        "show me people who fired error_*".
 
         Args:
             file: Path to events file.
@@ -460,18 +600,24 @@ def main_mcp(events_file: str | None = None) -> None:
         output: str = "report.html",
         user_ids: list[str] | None = None,
         filters: str = "{}",
+        auto_open: bool = True,
     ) -> dict[str, Any]:
-        """Generate a self-contained HTML report for a selected subset of users.
+        """Build a focused HTML report for a SCOPED subset of users (filtered/listed).
 
-        Use this after list_users/analyze_user to build a focused HTML report.
+        Prefer `quick_report` for the unfiltered happy path. Use this when the user
+        wants the report to contain only specific users or a filtered cohort.
+        The file is opened in the user's browser by default.
 
         Args:
             file: Path to events file.
             output: Output HTML path (default 'report.html').
             user_ids: Optional list of specific user IDs to include.
             filters: Optional JSON attribute filters e.g. '{"user_plan": "pro"}'.
+            auto_open: Open the resulting HTML in the user's browser (default True).
         """
         blobs, meta = _load_file(file)
-        return export_html_impl(blobs, meta, output=output, user_ids=user_ids, filters=filters)
+        return export_html_impl(
+            blobs, meta, output=output, user_ids=user_ids, filters=filters, auto_open=auto_open
+        )
 
     mcp.run(transport="stdio")
