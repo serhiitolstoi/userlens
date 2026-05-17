@@ -94,24 +94,52 @@ This is the integration point for internal tools, Slack bots, or any HTTP-native
 
 ## MCP server (v2.0)
 
-Query your event data directly from any MCP-compatible AI assistant (Claude Desktop, Cursor, Claude Code):
+Query your event data directly from any MCP-compatible AI assistant (Claude Code, Cursor, Claude Desktop).
+
+### Step 1 — Install
 
 ```bash
-pip install 'user-explorer[mcp]'
-user-explorer mcp /path/to/events.csv
+pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
 ```
 
-MCP config:
+### Step 2 — Connect to your AI tool
+
+**Claude Code** — run once in terminal:
+
+```bash
+claude mcp add user-explorer -- python3 -m user_explorer mcp
+```
+
+Verify:
+
+```bash
+claude mcp list
+# user-explorer: python3 -m user_explorer mcp - ✓ Connected
+```
+
+**Cursor** — add to `.cursor/mcp.json` in your project:
 
 ```json
 {
   "mcpServers": {
     "user-explorer": {
-      "command": "user-explorer",
-      "args": ["mcp", "/path/to/events.csv"]
+      "command": "python3",
+      "args": ["-m", "user_explorer", "mcp"]
     }
   }
 }
+```
+
+Restart Cursor after saving.
+
+### Step 3 — Use it
+
+Ask Claude or Cursor in natural language:
+
+```
+List users from events.csv
+Analyze user usr_alex_chen from events.csv
+Export an HTML report for pro users from events.csv
 ```
 
 **Available tools:**
@@ -153,12 +181,24 @@ user-explorer examples/claude_product_analytics.csv
 ## Install
 
 ```bash
-pip install user-explorer                   # core (CSV/JSON/JSONL)
-pip install 'user-explorer[parquet]'        # + Parquet support
-pip install 'user-explorer[mcp]'            # + MCP server
+pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
+```
+
+For Parquet support:
+
+```bash
+pip install "user-explorer[mcp,parquet] @ git+https://github.com/serhiitolstoi/userlens.git"
 ```
 
 Requires Python ≥ 3.10. Single mandatory dependency: [Polars](https://pola.rs/).
+
+### Updating
+
+When a new version is pushed to GitHub:
+
+```bash
+pip install --upgrade "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
+```
 
 ## License
 
