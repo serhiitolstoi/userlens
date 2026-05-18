@@ -1,0 +1,79 @@
+---
+description: Use the user-explorer MCP server to analyze event CSVs and open interactive HTML user reports.
+globs:
+  - "**/*.csv"
+  - "**/*.json"
+  - "**/*.parquet"
+  - "**/events*"
+alwaysApply: false
+---
+
+# User Explorer — agent instructions
+
+This project (or any project where the `user-explorer` MCP server is
+configured) gives you tools to parse product-analytics event data and generate
+an interactive HTML user explorer.
+
+## Triggering this rule
+
+Treat any of these intents as a user-explorer task:
+- "Analyze `<file>.csv`"
+- "Generate a user report from this data"
+- "Show me top users / what's in this data"
+- "Explore this Amplitude / Mixpanel / Segment export"
+- The user is opening or staring at a file that looks like an events log
+  (columns include `user_id`, `event_name`, `timestamp` or close variants)
+
+## Setup (one-time per machine)
+
+If the user mentions the MCP isn't connected, the install is:
+
+```bash
+pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
+```
+
+Add to `~/.cursor/mcp.json` (or `.cursor/mcp.json` in the project) :
+
+```json
+{
+  "mcpServers": {
+    "user-explorer": {
+      "command": "python3",
+      "args": ["-m", "user_explorer", "mcp"]
+    }
+  }
+}
+```
+
+Restart Cursor.
+
+## Default behavior
+
+When invoked, **prefer `quick_report`** over the multi-step chain:
+
+1. Call `quick_report(file=<absolute_path>)`.
+2. The tool generates the HTML and opens it in the user's browser automatically.
+3. Report back in 2-4 lines: file path, totals, top user, top event.
+4. Stop. Don't chain `list_users` / `analyze_user` / `export_html` unless the
+   user explicitly wants filtering or a single-user drill-down.
+
+## Tool selection guide
+
+| User says... | Use |
+|---|---|
+| "analyze this file" / "make a report" | `quick_report` |
+| "list / show users" | `list_users` |
+| "tell me about user X" | `analyze_user` |
+| "who fired event X" | `find_users_by_event` |
+| "summarize cohort / segment" | `summarize_cohort` |
+| "what events are in this file" | `get_event_taxonomy` |
+| "report for filter X" / "only pro users" | `export_html` with `filters` |
+
+## What NOT to do
+
+- Don't read the CSV manually with `head` / `cat` / Python when the MCP
+  server is available — it has a real pipeline behind the tool.
+- Don't try to render the HTML yourself or describe what the report would
+  show. Call the tool; the tool produces the artifact.
+- Don't chain `list_users` → `analyze_user` → `export_html` for a simple
+  "analyze this" request. `quick_report` is one call.

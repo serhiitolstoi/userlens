@@ -174,6 +174,34 @@ quick_report(file)   ← parses, renders, auto-opens the browser, returns a summ
 Both `quick_report` and `export_html` open the generated HTML in your browser
 automatically — no manual download step.
 
+### Optional — install the IDE skills
+
+The repo ships with ready-made skills that bias your IDE's AI agent toward
+the right tool with the right phrasing. Both are thin wrappers over the same
+MCP server, so install one or both as fits your editor.
+
+**Claude Code** — copy the skill into your user skills folder:
+
+```bash
+mkdir -p ~/.claude/skills
+cp -r .claude/skills/userlens ~/.claude/skills/
+```
+
+After restart, `/userlens path/to/events.csv` runs the happy path in one
+step. You can still call the MCP tools by name; the skill just makes
+"analyze this file" land on `quick_report` instead of a 3-tool chain.
+
+**Cursor** — copy the rule into your global rules folder:
+
+```bash
+mkdir -p ~/.cursor/rules
+cp .cursor/rules/userlens.mdc ~/.cursor/rules/
+```
+
+Cursor will auto-attach the rule when you have a CSV / JSON / Parquet /
+events-shaped file open, telling the agent to reach for `quick_report`
+on "analyze this" requests.
+
 ## Recipes
 
 - [From Postgres](docs/recipes/from-postgres.md)
