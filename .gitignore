@@ -1,4 +1,6 @@
 .claude/
+!.claude/skills/
+!.claude/skills/**
 __pycache__/
 *.py[cod]
 *.egg-info/
