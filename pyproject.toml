@@ -43,9 +43,9 @@ dev = [
 user-explorer = "user_explorer.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/serhiitolstoi/userlens"
-Repository = "https://github.com/serhiitolstoi/userlens"
-Issues = "https://github.com/serhiitolstoi/userlens/issues"
+Homepage = "https://github.com/serhiitolstoi/userexplorer"
+Repository = "https://github.com/serhiitolstoi/userexplorer"
+Issues = "https://github.com/serhiitolstoi/userexplorer/issues"
 
 [tool.hatch.version]
 path = "src/user_explorer/version.py"

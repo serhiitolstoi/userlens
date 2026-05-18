@@ -1,5 +1,5 @@
 ---
-name: userlens
+name: userexplorer
 description: Analyze a CSV/JSON/Parquet file of user events and open an interactive HTML report. Use when the user mentions analyzing event data, exploring user behavior, generating a user report, or working with Amplitude/Mixpanel/Segment/GA4/Heap exports.
 ---
 
@@ -15,7 +15,7 @@ Trigger on phrases like:
 - "analyze events.csv"
 - "generate a user report"
 - "explore this Amplitude export"
-- "/userlens path/to/events.csv"
+- "/userexplorer path/to/events.csv"
 - "show me what's in this product analytics data"
 - "who are my top users in <file>"
 
@@ -25,7 +25,7 @@ The `user-explorer` MCP server must be registered. If the user runs into a
 "tool not found" error, run once:
 
 ```bash
-pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
+pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userexplorer.git"
 claude mcp add user-explorer --scope user -- python3 -m user_explorer mcp
 ```
 
@@ -74,7 +74,7 @@ Then restart Claude Code.
 
 ## Example interaction
 
-> User: `/userlens examples/claude_product_analytics.csv`
+> User: `/userexplorer examples/claude_product_analytics.csv`
 
 You:
 1. Call `mcp__user-explorer__quick_report(file="examples/claude_product_analytics.csv")`

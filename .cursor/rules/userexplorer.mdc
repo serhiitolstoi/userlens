@@ -29,7 +29,7 @@ Treat any of these intents as a user-explorer task:
 If the user mentions the MCP isn't connected, the install is:
 
 ```bash
-pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
+pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userexplorer.git"
 ```
 
 Add to `~/.cursor/mcp.json` (or `.cursor/mcp.json` in the project) :

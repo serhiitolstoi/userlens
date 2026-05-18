@@ -99,7 +99,7 @@ Query your event data directly from any MCP-compatible AI assistant (Claude Code
 ### Step 1 — Install
 
 ```bash
-pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
+pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userexplorer.git"
 ```
 
 ### Step 2 — Connect to your AI tool
@@ -184,10 +184,10 @@ MCP server, so install one or both as fits your editor.
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -r .claude/skills/userlens ~/.claude/skills/
+cp -r .claude/skills/userexplorer ~/.claude/skills/
 ```
 
-After restart, `/userlens path/to/events.csv` runs the happy path in one
+After restart, `/userexplorer path/to/events.csv` runs the happy path in one
 step. You can still call the MCP tools by name; the skill just makes
 "analyze this file" land on `quick_report` instead of a 3-tool chain.
 
@@ -195,7 +195,7 @@ step. You can still call the MCP tools by name; the skill just makes
 
 ```bash
 mkdir -p ~/.cursor/rules
-cp .cursor/rules/userlens.mdc ~/.cursor/rules/
+cp .cursor/rules/userexplorer.mdc ~/.cursor/rules/
 ```
 
 Cursor will auto-attach the rule when you have a CSV / JSON / Parquet /
@@ -220,13 +220,13 @@ user-explorer examples/claude_product_analytics.csv
 ## Install
 
 ```bash
-pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
+pip install "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userexplorer.git"
 ```
 
 For Parquet support:
 
 ```bash
-pip install "user-explorer[mcp,parquet] @ git+https://github.com/serhiitolstoi/userlens.git"
+pip install "user-explorer[mcp,parquet] @ git+https://github.com/serhiitolstoi/userexplorer.git"
 ```
 
 Requires Python ≥ 3.10. Single mandatory dependency: [Polars](https://pola.rs/).
@@ -236,7 +236,7 @@ Requires Python ≥ 3.10. Single mandatory dependency: [Polars](https://pola.rs/
 When a new version is pushed to GitHub:
 
 ```bash
-pip install --upgrade "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userlens.git"
+pip install --upgrade "user-explorer[mcp] @ git+https://github.com/serhiitolstoi/userexplorer.git"
 ```
 
 ## License
