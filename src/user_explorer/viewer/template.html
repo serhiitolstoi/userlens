@@ -554,14 +554,18 @@ details[open] .sess-arrow{transform:rotate(90deg)}
   border:1px solid transparent;
 }
 .fp-arrow{color:var(--text-3);font-size:10px}
-.fp-gap{
-  font-size:10px;padding:1px 7px;border-radius:4px;
+.fp-meta{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
+.fp-cnt{font-size:11px;color:var(--text-2);font-family:var(--mono);flex-shrink:0;text-align:right;white-space:nowrap}
+.fp-cnt b{color:var(--text);font-weight:600}
+.fp-len{font-size:10px;color:var(--text-3);font-family:var(--mono);flex-shrink:0;white-space:nowrap;min-width:60px;text-align:right}
+.fp-bar{height:4px;background:var(--border);border-radius:2px;width:80px;flex-shrink:0}
+.fp-bar-fg{height:100%;background:var(--accent);border-radius:2px;min-width:2px}
+.fp-more-pill{
+  font-size:10px;padding:2px 8px;border-radius:4px;
   background:var(--card-2);color:var(--text-3);
   border:1px dashed var(--border);font-family:var(--mono);
+  white-space:nowrap;font-style:italic;
 }
-.fp-cnt{font-size:11px;color:var(--text-2);font-family:var(--mono);flex-shrink:0;min-width:36px;text-align:right}
-.fp-bar{height:3px;background:var(--border);border-radius:1px;width:50px;flex-shrink:0}
-.fp-bar-fg{height:100%;background:var(--accent);border-radius:1px;min-width:2px}
 .fp-toggle{font-size:9px;color:var(--text-3);transition:transform .15s ease;width:10px;flex-shrink:0}
 .fp-row.open .fp-toggle{transform:rotate(90deg);color:var(--accent)}
 .fp-drawer{
@@ -1516,39 +1520,96 @@ function renderSessions(u){
 function renderFlow(u){
   const container=document.getElementById('pane-fl');
   const v=getFilteredView(u);
-  const pairs={};
-  let totalTrans=0;
-  v.sessions.forEach(([,,evs])=>{
-    for(let i=0;i<evs.length-1;i++){
-      const a=evs[i][1],b=evs[i+1][1];
-      const key=a+'\x1f'+b;
-      if(!pairs[key]) pairs[key]={a,b,count:0};
-      pairs[key].count++;
-      totalTrans++;
+  if(!v.sessions.length){container.innerHTML='<div class="fp-empty">No sessions in range</div>';return;}
+
+  // Compute a "shape" for each session by collapsing consecutive duplicates of the same
+  // event, then compressing long shapes to head + ⋯ + tail. Sessions whose dedup'd shapes
+  // match group together — this captures the high-level flow even when one user repeats
+  // a step (e.g. message_sent) many times while another does it once.
+  const SIG_SHORT_MAX=5, SIG_HEAD=3, SIG_TAIL=2;
+  function shapeOf(evs){
+    // Keep each event name only the FIRST time it appears in the session — this turns
+    // a 60-event msg/resp ping-pong into the 2-element shape [msg, resp], and groups
+    // sessions by the high-level flow of events they touch rather than exact sequence.
+    const out=[]; const seen=new Set();
+    for(const e of evs){
+      const n=e[1];
+      if(!seen.has(n)){ out.push(n); seen.add(n); }
     }
+    return out;
+  }
+  function signatureOf(evs){
+    const shape=shapeOf(evs);
+    if(shape.length<=SIG_SHORT_MAX){
+      return {names:shape, compressed:false, hiddenCount:0, shapeLen:shape.length, rawLen:evs.length};
+    }
+    const head=shape.slice(0,SIG_HEAD);
+    const tail=shape.slice(-SIG_TAIL);
+    const hidden=shape.length-SIG_HEAD-SIG_TAIL;
+    return {names:[...head, null, ...tail], compressed:true, hiddenCount:hidden, shapeLen:shape.length, rawLen:evs.length};
+  }
+  function sigKey(sig){
+    // Group by head+tail shape only; middle-step count is shown as a range, not part of the key.
+    return sig.names.map(n=>n===null?'__MORE__':n).join('\x1f');
+  }
+
+  const groups={}; // key → {sig, count, sessions, min/max for hidden/raw}
+  v.sessions.forEach((s,idx)=>{
+    if(!s[2].length) return;
+    const sig=signatureOf(s[2]);
+    const k=sigKey(sig);
+    if(!groups[k]){
+      groups[k]={sig,count:0,sessions:[],minHidden:sig.hiddenCount,maxHidden:sig.hiddenCount,minLen:sig.rawLen,maxLen:sig.rawLen};
+    }
+    groups[k].count++;
+    groups[k].sessions.push(idx);
+    groups[k].minHidden=Math.min(groups[k].minHidden,sig.hiddenCount);
+    groups[k].maxHidden=Math.max(groups[k].maxHidden,sig.hiddenCount);
+    groups[k].minLen=Math.min(groups[k].minLen,sig.rawLen);
+    groups[k].maxLen=Math.max(groups[k].maxLen,sig.rawLen);
   });
-  const ranked=Object.values(pairs).sort((a,b)=>b.count-a.count);
-  if(!ranked.length){container.innerHTML='<div class="fp-empty">Not enough events for flow analysis</div>';return;}
-  const top=ranked.slice(0,15);
+  const ranked=Object.values(groups).sort((a,b)=>b.count-a.count);
+  if(!ranked.length){container.innerHTML='<div class="fp-empty">No session paths to analyze</div>';return;}
+
+  const top=ranked.slice(0,12);
+  const totalSess=v.sessions.length;
   const maxCnt=top[0].count;
+  const topPct=Math.round(top[0].count/totalSess*100);
+
   function pill(name){
     const fam=famOf(name);
     return `<span class="fp-pill fam-${CSS.escape(fam)}">${esc(name)}</span>`;
   }
+  function morePill(label){return `<span class="fp-more-pill">⋯ ${label}</span>`;}
+  function chainHtml(g){
+    const parts=[];
+    const moreLabel=g.minHidden===g.maxHidden?`+${g.minHidden} step${g.minHidden!==1?'s':''}`:`+${g.minHidden}–${g.maxHidden} steps`;
+    g.sig.names.forEach((n,i)=>{
+      if(i>0) parts.push('<span class="fp-arrow">→</span>');
+      parts.push(n===null?morePill(moreLabel):pill(n));
+    });
+    return parts.join('');
+  }
+
   const rowsHtml=top.map((g,i)=>{
-    const pct=totalTrans?Math.round(g.count/totalTrans*100):0;
+    const pct=Math.round(g.count/totalSess*100);
+    const lenLabel=g.minLen===g.maxLen?`${g.minLen} events`:`${g.minLen}–${g.maxLen} events`;
     return `<div class="fp-row" data-idx="${i}">
       <div class="fp-row-head">
         <span class="fp-toggle">▶</span>
-        <div class="fp-chain">${pill(g.a)}<span class="fp-arrow">→</span>${pill(g.b)}</div>
-        <div class="fp-bar"><div class="fp-bar-fg" style="width:${Math.round(g.count/maxCnt*100)}%"></div></div>
-        <span class="fp-cnt">${g.count.toLocaleString()} · ${pct}%</span>
+        <div class="fp-chain">${chainHtml(g)}</div>
+        <div class="fp-meta">
+          <div class="fp-bar"><div class="fp-bar-fg" style="width:${Math.round(g.count/maxCnt*100)}%"></div></div>
+          <span class="fp-cnt"><b>${g.count.toLocaleString()}</b> session${g.count!==1?'s':''} · ${pct}%</span>
+          <span class="fp-len">${lenLabel}</span>
+        </div>
       </div>
       <div class="fp-drawer"></div>
     </div>`;
   }).join('');
-  const uniq=ranked.length;
-  container.innerHTML=`<div class="fp-head"><b>${uniq.toLocaleString()}</b> unique transition${uniq!==1?'s':''} · top: <b>${esc(top[0].a)} → ${esc(top[0].b)}</b> (${top[0].count.toLocaleString()}×)</div><div class="fp-panel">${rowsHtml}</div>`;
+
+  container.innerHTML=`<div class="fp-head"><b>${ranked.length.toLocaleString()}</b> distinct path${ranked.length!==1?'s':''} · top path covers <b>${topPct}%</b> of sessions · ${totalSess.toLocaleString()} session${totalSess!==1?'s':''} analyzed</div><div class="fp-panel">${rowsHtml}</div>`;
+
   container.querySelectorAll('.fp-row').forEach(row=>{
     const idx=+row.dataset.idx;
     const g=top[idx];
@@ -1557,11 +1618,8 @@ function renderFlow(u){
       const drawer=row.querySelector('.fp-drawer');
       if(wasOpen&&!drawer.dataset.built){
         drawer.dataset.built='1';
-        const matching=v.sessions.filter(([,,evs])=>{
-          for(let i=0;i<evs.length-1;i++){if(evs[i][1]===g.a&&evs[i+1][1]===g.b)return true;}
-          return false;
-        }).slice(0,3);
-        const moreNote=`<div class="fp-drawer-h">showing ${matching.length} of ${g.count} session${g.count!==1?'s':''} with this transition</div>`;
+        const matching=g.sessions.slice(0,3).map(i=>v.sessions[i]);
+        const moreNote=`<div class="fp-drawer-h">showing ${matching.length} of ${g.count} matching session${g.count!==1?'s':''}</div>`;
         const examples=matching.map(([sid,ts,evs])=>{
           const fmt=fmtTs(ts);
           const evHtml=evs.map(ev=>renderEventRow(ev,sid,0)).join('');
