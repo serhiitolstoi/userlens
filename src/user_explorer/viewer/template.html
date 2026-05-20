@@ -505,13 +505,20 @@ details[open] .sess-arrow{transform:rotate(90deg)}
 .sx-dow-axis-cell{width:18px;text-align:center;flex-shrink:0;line-height:1;padding:2px 0}
 .sx-stacked{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:980px){.sx-stacked{grid-template-columns:1fr}}
+.sx-insight{font-size:13px;color:var(--text);margin:-2px 0 11px;line-height:1.5}
+.sx-insight b{color:var(--accent-hi);font-weight:600}
+.sx-muted{color:var(--text-3)}
+.sx-legend{display:flex;align-items:center;gap:3px;font-size:9px;color:var(--text-3);font-family:var(--mono);margin-top:9px;justify-content:flex-end}
+.sx-legend-cell{width:11px;height:11px;border-radius:2px;display:inline-block}
+.sx-wk-summary{font-size:10px;color:var(--text-3);font-family:var(--mono);margin-top:8px;padding-top:7px;border-top:1px solid var(--border-soft)}
+.sx-wk-summary b{color:var(--text);font-weight:600}
 .sx-trend{height:140px;width:100%}
 .sx-trend-axis{font-size:9px;fill:var(--text-3);font-family:var(--mono)}
 .sx-trend-grid{stroke:var(--border-soft);stroke-width:1}
 .sx-trend-line{stroke:var(--accent);stroke-width:1.5;fill:none}
 .sx-trend-area{fill:var(--accent);opacity:.07}
-.sx-trend-dot{fill:var(--accent);cursor:pointer}
-.sx-trend-dot:hover{r:4}
+.sx-trend-dot{fill:var(--accent);cursor:pointer;transition:fill-opacity .12s ease}
+.sx-trend-dot:hover{stroke:var(--accent);stroke-width:2;fill-opacity:1}
 .sx-hist{display:flex;flex-direction:column;gap:5px}
 .sx-hist-row{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono)}
 .sx-hist-lbl{width:48px;color:var(--text-3);font-size:10px}
@@ -1382,8 +1389,34 @@ function renderSessions(u){
   const v=getFilteredView(u);
   if(!v.sessions.length){container.innerHTML='<div class="sx-card sx-empty">No session data in this range</div>';return;}
 
-  // ── DoW × Hour matrix ──
-  const grid=Array.from({length:7},()=>Array(24).fill(null).map(()=>({n:0,fams:{},durs:[]})));
+  // ── activity profile (plain-language headline) ──
+  const bandLabels=['night','morning','afternoon','evening'];
+  const bandOf=h=>h<6?0:h<12?1:h<18?2:3;
+  const DOW_FULL=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const bandCount=[0,0,0,0], dayCount=[0,0,0,0,0,0,0], hourCount=Array(24).fill(0);
+  let weekdayN=0, weekendN=0;
+  v.sessions.forEach(([,ts])=>{
+    const d=new Date(ts.replace(' ','T')); if(isNaN(d)) return;
+    const dow=(d.getDay()+6)%7, hr=d.getHours();
+    bandCount[bandOf(hr)]++; dayCount[dow]++; hourCount[hr]++;
+    if(dow<5) weekdayN++; else weekendN++;
+  });
+  let insightHtml='';
+  const totSess=weekdayN+weekendN;
+  if(totSess){
+    const topBand=bandCount.indexOf(Math.max(...bandCount));
+    const peakDay=dayCount.indexOf(Math.max(...dayCount));
+    const wkPct=weekdayN/totSess;
+    const dayKind=wkPct>=0.7?'Weekday':wkPct<=0.3?'Weekend':'';
+    const band=bandLabels[topBand]+'s';
+    // Band = dominant time-of-day window (robust, summed over its hours); peak day = single
+    // busiest weekday. Reported separately so they never contradict each other.
+    const phrase=dayKind?`${dayKind} ${band}`:`${band[0].toUpperCase()+band.slice(1)}, all week`;
+    insightHtml=`<div class="sx-insight">Most active <b>${phrase}</b> <span class="sx-muted">·</span> busiest on <b>${DOW_FULL[peakDay]}s</b></div>`;
+  }
+
+  // ── DoW × Hour matrix (single-hue intensity = activity volume) ──
+  const grid=Array.from({length:7},()=>Array(24).fill(null).map(()=>({n:0,evs:0,durs:[]})));
   v.sessions.forEach(([,ts,evs])=>{
     const d=new Date(ts.replace(' ','T'));
     if(isNaN(d)) return;
@@ -1391,21 +1424,18 @@ function renderSessions(u){
     const hr=d.getHours();
     const cell=grid[dow][hr];
     cell.n++;
+    cell.evs+=evs.length;
     cell.durs.push(sessDurMin(evs));
-    const fc={};
-    evs.forEach(([,n])=>{const f=famOf(n);fc[f]=(fc[f]||0)+1;});
-    const dom=Object.entries(fc).sort((a,b)=>b[1]-a[1])[0]?.[0]||'other';
-    cell.fams[dom]=(cell.fams[dom]||0)+1;
   });
   let maxCell=0;
   grid.forEach(r=>r.forEach(c=>{if(c.n>maxCell)maxCell=c.n;}));
   if(maxCell<1) maxCell=1;
   const emptyCellColor=getComputedStyle(document.documentElement).getPropertyValue('--empty-cell').trim()||(dark?'#1a1a20':'#eaeaee');
+  const cellRGB=dark?'123,134,232':'94,106,210'; // accent rgb (dark uses lighter accent-hi)
   function cellFill(c){
     if(!c.n) return emptyCellColor;
-    const dom=Object.entries(c.fams).sort((a,b)=>b[1]-a[1])[0]?.[0]||'other';
-    const hsl=featureColor(dom);
-    return hsl.replace('hsl(','hsla(').replace(')',` / ${(0.22+0.78*Math.pow(c.n/maxCell,0.55)).toFixed(2)})`);
+    const a=(0.16+0.84*Math.pow(c.n/maxCell,0.6)).toFixed(2);
+    return `rgba(${cellRGB},${a})`;
   }
   function avgDur(c){if(!c.durs.length)return 0;return Math.round(c.durs.reduce((a,b)=>a+b,0)/c.durs.length);}
   const axisCells=Array.from({length:24},(_,h)=>`<div class="sx-dow-axis-cell">${(h%6===0)?h:''}</div>`).join('');
@@ -1417,23 +1447,27 @@ function renderSessions(u){
     }).join('');
     return `<div class="sx-dow-row"><span class="sx-dow-lbl">${lbl}</span><div class="sx-dow-cells">${cells}</div></div>`;
   }).join('');
+  const legendSteps=[0.16,0.37,0.58,0.79,1].map(a=>`<span class="sx-legend-cell" style="background:rgba(${cellRGB},${a})"></span>`).join('');
   const dowCard=`<div class="sx-card">
-    <div class="sx-h"><span class="sx-title">When this user is active</span><span class="sx-sub">${v.sessions.length} session${v.sessions.length!==1?'s':''} · hour-of-day × day-of-week</span></div>
+    <div class="sx-h"><span class="sx-title">When this user is active</span><span class="sx-sub">${v.sessions.length} session${v.sessions.length!==1?'s':''}</span></div>
+    ${insightHtml}
     <div class="sx-dow-wrap">
       <div class="sx-dow-axis"><div style="display:flex">${axisCells}</div></div>
       ${dowHtml}
     </div>
+    <div class="sx-legend">Less ${legendSteps} More</div>
   </div>`;
 
-  // ── Trend line: sessions per week ──
+  // ── Trend line: sessions per week (dot size/opacity = activity depth = events) ──
   const weeks={};
-  v.sessions.forEach(([,ts])=>{
+  v.sessions.forEach(([,ts,evs])=>{
     const d=new Date(ts.replace(' ','T'));
     if(isNaN(d)) return;
     const day=(d.getDay()+6)%7;
     const wkStart=new Date(d.getFullYear(),d.getMonth(),d.getDate()-day);
     const k=wkStart.toISOString().slice(0,10);
-    weeks[k]=(weeks[k]||0)+1;
+    if(!weeks[k]) weeks[k]={n:0,ev:0,min:0};
+    weeks[k].n++; weeks[k].ev+=evs.length; weeks[k].min+=sessDurMin(evs);
   });
   // Fill in zero weeks between min and max
   const wkeys=Object.keys(weeks).sort();
@@ -1443,29 +1477,45 @@ function renderSessions(u){
     const pts=[];
     for(let d=new Date(first); d<=last; d.setDate(d.getDate()+7)){
       const k=d.toISOString().slice(0,10);
-      pts.push({k,n:weeks[k]||0});
+      const w=weeks[k]||{n:0,ev:0,min:0};
+      pts.push({k,n:w.n,ev:w.ev,min:w.min});
     }
-    if(pts.length===1) pts.push({k:pts[0].k,n:pts[0].n});
+    if(pts.length===1) pts.push({...pts[0]});
     const W=320,H=110,PX=28,PY=12,IW=W-PX-6,IH=H-PY-22;
     const maxN=Math.max(...pts.map(p=>p.n),1);
+    const maxEv=Math.max(...pts.map(p=>p.ev),1);
     const xAt=i=>PX+(pts.length<=1?IW/2:i*(IW/(pts.length-1)));
     const yAt=n=>PY+IH-(n/maxN)*IH;
     const pathD=pts.map((p,i)=>`${i===0?'M':'L'}${xAt(i).toFixed(1)} ${yAt(p.n).toFixed(1)}`).join(' ');
     const areaD=pathD+` L${xAt(pts.length-1).toFixed(1)} ${(PY+IH).toFixed(1)} L${xAt(0).toFixed(1)} ${(PY+IH).toFixed(1)} Z`;
-    const dots=pts.map((p,i)=>`<circle class="sx-trend-dot" cx="${xAt(i).toFixed(1)}" cy="${yAt(p.n).toFixed(1)}" r="2.5" data-wk="${p.k}" data-n="${p.n}"/>`).join('');
+    const dots=pts.map((p,i)=>{
+      if(!p.n) return '';
+      const depth=p.ev/maxEv;
+      const r=(2.2+3.3*Math.sqrt(depth)).toFixed(1);
+      const op=(0.45+0.55*depth).toFixed(2);
+      return `<circle class="sx-trend-dot" cx="${xAt(i).toFixed(1)}" cy="${yAt(p.n).toFixed(1)}" r="${r}" fill-opacity="${op}" data-wk="${p.k}" data-n="${p.n}" data-ev="${p.ev}" data-min="${p.min}"/>`;
+    }).join('');
     const yticks=[0,Math.ceil(maxN/2),maxN];
-    const grid=yticks.map(t=>`<line class="sx-trend-grid" x1="${PX}" y1="${yAt(t).toFixed(1)}" x2="${W-6}" y2="${yAt(t).toFixed(1)}"/>`).join('');
+    const gridL=yticks.map(t=>`<line class="sx-trend-grid" x1="${PX}" y1="${yAt(t).toFixed(1)}" x2="${W-6}" y2="${yAt(t).toFixed(1)}"/>`).join('');
     const yLbls=yticks.map(t=>`<text class="sx-trend-axis" x="${PX-4}" y="${(yAt(t)+3).toFixed(1)}" text-anchor="end">${t}</text>`).join('');
     const firstD=new Date(pts[0].k), lastD=new Date(pts[pts.length-1].k);
     const xLbls=`<text class="sx-trend-axis" x="${PX}" y="${H-4}">${MONTHS[firstD.getMonth()]} ${firstD.getDate()}</text><text class="sx-trend-axis" x="${W-6}" y="${H-4}" text-anchor="end">${MONTHS[lastD.getMonth()]} ${lastD.getDate()}</text>`;
+    // summary over the full span (incl. dormant weeks = honest weekly rate)
+    const ns=pts.map(p=>p.n);
+    const avgWk=ns.reduce((a,b)=>a+b,0)/ns.length;
+    const sortedNs=ns.slice().sort((a,b)=>a-b);
+    const medWk=sortedNs[Math.floor(sortedNs.length/2)];
+    const busiest=pts.reduce((m,p)=>p.n>m.n?p:m,pts[0]);
+    const busiestD=new Date(busiest.k);
     trendHtml=`<div class="sx-card">
       <div class="sx-h"><span class="sx-title">Sessions per week</span><span class="sx-sub">${pts.length} week${pts.length!==1?'s':''}</span></div>
       <svg class="sx-trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-        ${grid}${yLbls}${xLbls}
+        ${gridL}${yLbls}${xLbls}
         <path class="sx-trend-area" d="${areaD}"/>
         <path class="sx-trend-line" d="${pathD}"/>
         ${dots}
       </svg>
+      <div class="sx-wk-summary">avg <b>${avgWk.toFixed(1)}</b>/wk · median <b>${medWk}</b>/wk · busiest <b>${busiest.n}</b> <span class="sx-muted">(${MONTHS[busiestD.getMonth()]} ${busiestD.getDate()})</span> · dot size = events</div>
     </div>`;
   }
 
@@ -1500,16 +1550,17 @@ function renderSessions(u){
     cell.addEventListener('mouseenter',()=>{
       const di=+cell.dataset.dow, hi=+cell.dataset.hr;
       const c=grid[di][hi];
-      tipShow(`<div class="tip-h">${DOW[di]} ${String(hi).padStart(2,'0')}:00</div><div class="tip-sub">${c.n} session${c.n!==1?'s':''} · avg ${fmtMin(avgDur(c))}</div>`);
+      tipShow(`<div class="tip-h">${DOW[di]} ${String(hi).padStart(2,'0')}:00</div><div class="tip-sub">${c.n} session${c.n!==1?'s':''} · ${c.evs} events · avg ${fmtMin(avgDur(c))}</div>`);
     });
     cell.addEventListener('mousemove',tipMove);
     cell.addEventListener('mouseleave',tipDelayHide);
   });
-  // tooltip on trend dots
+  // tooltip on trend dots — week sessions + events + active time (depth)
   container.querySelectorAll('.sx-trend-dot').forEach(dot=>{
     dot.addEventListener('mouseenter',()=>{
       const d=new Date(dot.dataset.wk);
-      tipShow(`<div class="tip-h">Week of ${MONTHS[d.getMonth()]} ${d.getDate()}</div><div class="tip-sub">${dot.dataset.n} session${dot.dataset.n!=='1'?'s':''}</div>`);
+      const mins=+dot.dataset.min;
+      tipShow(`<div class="tip-h">Week of ${MONTHS[d.getMonth()]} ${d.getDate()}</div><div class="tip-sub">${dot.dataset.n} session${dot.dataset.n!=='1'?'s':''} · ${dot.dataset.ev} events · ${fmtMin(mins)} active</div>`);
     });
     dot.addEventListener('mousemove',tipMove);
     dot.addEventListener('mouseleave',tipDelayHide);
