@@ -58,9 +58,15 @@ Family labels are derived purely from event names — no ML, no config. The two-
 
 Family colors are `hash(name) % 12` into a fixed 12-hue palette. The same family name always maps to the same color across all runs and all files.
 
-### Pipeline seam
+### Pipeline seam — one core, many surfaces
 
-`pipeline.run()` returns `PipelineResult` (blobs + meta) before rendering. The CLI calls `render()` on it. The future MCP server (v2) will call the same `pipeline.run()` and return JSON directly — HTML rendering becomes one optional call.
+`pipeline.run()` returns `PipelineResult` (blobs + meta) before any HTML is written. Every consumer builds on that single seam:
+
+- **CLI** (`cli.py`) calls `render()` for HTML, or `--profile`/`--user` for JSON.
+- **MCP server** (`mcp_server.py`, shipped) exposes the `*_impl` JSON shapers as tools.
+- **HTTP server** (`server.py`, `serve --api`) calls the same `*_impl` functions over REST.
+
+The `*_impl` functions in `mcp_server.py` are the single source of truth for the JSON contract — CLI `--profile`/`--user`, MCP tools, and REST endpoints all reuse them, so the shapes never diverge.
 
 ### Atomic writes
 
@@ -70,40 +76,41 @@ Family colors are `hash(name) % 12` into a fixed 12-hue palette. The same family
 
 ```
 src/user_explorer/
-├── __init__.py          version, public API surface
+├── __init__.py          public API: run, PipelineOptions, PipelineResult,
+│                        render, extract_insights, read_events, __version__
 ├── __main__.py          python -m user_explorer entry point
-├── cli.py               argparse wiring, exit code handling
+├── cli.py               argparse wiring, exit codes, --profile/--user JSON
 ├── pipeline.py          PipelineOptions, PipelineResult, run()
+├── insights.py          extract_insights() — deterministic per-user signals
+├── mcp_server.py        FastMCP server + *_impl JSON shapers (shared contract)
+├── server.py            `serve` — file-watch HTTP server + optional REST API
 ├── version.py           __version__ = "..."
 │
 ├── io/
-│   ├── __init__.py
-│   ├── reader.py        dispatch by extension
-│   ├── csv_reader.py    polars.scan_csv wrapper
-│   ├── parquet_reader.py polars.scan_parquet wrapper
-│   └── json_reader.py   scan_ndjson + array-of-objects JSON
+│   ├── __init__.py      re-exports read_events
+│   └── reader.py        dispatch by extension (.csv/.parquet/.json/.jsonl)
 │
 ├── schema/
 │   ├── __init__.py
 │   ├── aliases.py       ALIAS_TABLE: canonical → [alias, ...]
-│   ├── sniff.py         resolve_schema(df, overrides) → ResolvedSchema
-│   └── types.py         materialize(df, schema) → normalized DataFrame
+│   ├── sniff.py         sniff_schema(df, overrides) → ResolvedSchema (+ SchemaError)
+│   └── types.py         ResolvedSchema, materialize to canonical columns
 │
 ├── derive/
 │   ├── __init__.py
 │   ├── attributes.py    classify_extras, derive_attributes, build_attributes_meta
 │   ├── families.py      derive_families → (assignment dict, FamilyInfo registry)
-│   ├── properties.py    extract_event_props → flat key/value list
+│   ├── properties.py    event-property extraction → flat key/value list
 │   └── sessions.py      derive_sessions → {user_id: [[session_id, ts, [events]]]}
 │
 ├── transform/
 │   ├── __init__.py
-│   └── build.py         build_user_blobs → list[dict]
+│   └── build.py         build_user_blobs, normalize_dataframe → list[dict]
 │
 └── viewer/
-    ├── __init__.py
-    ├── render.py         render(blobs, meta, out_path)
-    └── template.html     self-contained HTML viewer
+    ├── __init__.py      re-exports render
+    ├── render.py        render(blobs, meta, out_path)
+    └── template.html    self-contained HTML viewer
 ```
 
 ## Blob shape reference

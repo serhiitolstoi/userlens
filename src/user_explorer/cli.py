@@ -9,6 +9,7 @@ from pathlib import Path
 
 from user_explorer import __version__
 from user_explorer.io.reader import ReadError
+from user_explorer.mcp_server import analyze_user_impl, list_users_impl
 from user_explorer.mcp_server import main_mcp as _main_mcp
 from user_explorer.pipeline import PipelineOptions, run
 from user_explorer.schema.sniff import SchemaError
@@ -19,15 +20,6 @@ EXIT_OK = 0
 EXIT_OTHER = 1
 EXIT_SCHEMA = 2
 EXIT_EMPTY = 3
-
-# Flags reserved for future versions; accepted but not yet active.
-_COMING_SOON: dict[str, str] = {
-    "--profile": "v2 (structured JSON output per user)",
-    "--user": "v2 (single-user JSON output)",
-    "--llm-summarize": "v2.1 (LLM narrative generation)",
-    "--diff": "v3 (compare two event files)",
-    "--cohort": "v1.1 (cohort summary tab)",
-}
 
 
 def _build_serve_parser() -> argparse.ArgumentParser:
@@ -109,14 +101,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit a single JSON-line summary on stdout. Used by AI agents.",
     )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="Emit per-user JSON (all users, no HTML) on stdout. For AI agents / scripts.",
+    )
+    parser.add_argument(
+        "--user",
+        dest="user",
+        default=None,
+        metavar="USER_ID",
+        help="Emit full JSON for a single user (no HTML) on stdout. For AI agents / scripts.",
+    )
     parser.add_argument("--version", action="version", version=f"user-explorer {__version__}")
-
-    # Reserved flags — accepted so they print a helpful message instead of an argparse error
-    for flag in _COMING_SOON:
-        dest = f"_reserved_{flag.lstrip('-').replace('-', '_')}"
-        parser.add_argument(
-            flag, dest=dest, nargs="?", const=True, default=None, help=argparse.SUPPRESS
-        )
 
     return parser
 
@@ -146,13 +143,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(effective_argv)
 
-    # Check if any reserved flag was passed
-    for flag, roadmap in _COMING_SOON.items():
-        attr = f"_reserved_{flag.lstrip('-').replace('-', '_')}"
-        if getattr(args, attr, None) is not None:
-            print(f"user-explorer: {flag} is coming soon ({roadmap})", file=sys.stderr)
-            return EXIT_OK
-
     options = PipelineOptions(
         events_path=args.events,
         user_id_override=args.user_id,
@@ -174,6 +164,22 @@ def main(argv: list[str] | None = None) -> int:
     except SchemaError as e:
         print(f"user-explorer: schema error: {e}", file=sys.stderr)
         return EXIT_SCHEMA
+
+    # Structured JSON output for agents/scripts — no HTML, single JSON line on stdout.
+    if args.user is not None:
+        result_user = analyze_user_impl(result.blobs, result.meta, user_id=args.user)
+        print(json.dumps(result_user, separators=(",", ":"), default=str))
+        return EXIT_OTHER if "error" in result_user else EXIT_OK
+
+    if args.profile:
+        payload = {
+            "schema": result.schema.as_mapping(),
+            "users": list_users_impl(
+                result.blobs, result.meta, limit=len(result.blobs)
+            )["users"],
+        }
+        print(json.dumps(payload, separators=(",", ":"), default=str))
+        return EXIT_OK
 
     if args.quiet:
         summary = {

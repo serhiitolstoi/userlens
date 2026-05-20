@@ -10,7 +10,10 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [{ name = "user-explorer contributors" }]
-keywords = ["product-analytics", "user-behavior", "event-analysis", "single-user", "html-report"]
+keywords = [
+  "product-analytics", "user-behavior", "event-analysis", "single-user", "html-report",
+  "mcp", "ai-agents", "claude", "cursor", "llm",
+]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",

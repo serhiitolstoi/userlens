@@ -53,3 +53,34 @@ def test_default_mode_renders_html(tmp_path: Path) -> None:
     assert "page_viewed" in html
     # summary line goes to stderr
     assert "users" in proc.stderr or "wrote" in proc.stderr
+
+
+def test_profile_emits_json() -> None:
+    proc = _run([str(FIXTURES / "tiny.csv"), "--profile"])
+    assert proc.returncode == 0, proc.stderr
+    line = proc.stdout.strip()
+    assert "\n" not in line  # single JSON line
+    payload = json.loads(line)
+    assert payload["schema"]["user_id"] == "user_id"
+    assert len(payload["users"]) == 3
+    sample = payload["users"][0]
+    for key in ("user_id", "events", "sessions", "first_seen", "last_seen", "power_score"):
+        assert key in sample
+
+
+def test_user_flag_emits_json() -> None:
+    proc = _run([str(FIXTURES / "tiny.csv"), "--user", "102"])
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout.strip())
+    assert payload["user_id"] == "102"
+    assert set(payload.keys()) >= {"stats", "insights", "sessions", "top_events"}
+    # 102 fired checkout_completed in the fixture
+    names = {e["name"] for e in payload["top_events"]}
+    assert "checkout_completed" in names
+
+
+def test_user_flag_unknown_user_nonzero() -> None:
+    proc = _run([str(FIXTURES / "tiny.csv"), "--user", "does_not_exist"])
+    assert proc.returncode != 0
+    payload = json.loads(proc.stdout.strip())
+    assert "error" in payload

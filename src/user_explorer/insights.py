@@ -6,16 +6,29 @@ from datetime import date, datetime
 from itertools import groupby
 from typing import Any
 
-TODAY = date(2026, 5, 14)
 
+def extract_insights(
+    blob: dict[str, Any],
+    all_blobs: list[dict[str, Any]],
+    *,
+    as_of: date | None = None,
+) -> dict[str, Any]:
+    """Return structured insight fields for a user.
 
-def extract_insights(blob: dict[str, Any], all_blobs: list[dict[str, Any]]) -> dict[str, Any]:
-    """Return structured insight fields for a user."""
+    Args:
+        blob: The user blob to analyze.
+        all_blobs: All user blobs (used for percentile-based power_score).
+        as_of: Reference "today" for recency metrics. Defaults to the real
+            current date. Pass an explicit date to make output deterministic
+            (e.g. in tests).
+    """
+    as_of = as_of or date.today()
+
     # --- days_since_last ---
     ls_str: str = blob.get("ls", "")
     try:
         ls_date = datetime.strptime(ls_str[:10], "%Y-%m-%d").date()
-        days_since_last = (TODAY - ls_date).days
+        days_since_last = (as_of - ls_date).days
     except (ValueError, TypeError):
         days_since_last = -1
 

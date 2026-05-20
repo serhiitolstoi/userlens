@@ -62,7 +62,7 @@ Auto-detected in this order:
 2. Unix epoch seconds (detected by magnitude: values < 2×10¹⁰)
 3. Unix epoch milliseconds (values ≥ 2×10¹⁰)
 
-All timestamps are treated as UTC-naive. Mixed-timezone strings are parsed as-is with a warning. Use `--tz` (v1.1) for explicit timezone handling.
+All timestamps are treated as UTC-naive. Mixed-timezone strings are parsed as-is with a warning. Use `--tz IANA_ZONE` (e.g. `Europe/Lisbon`, `UTC`) for explicit timezone handling.
 
 ## Schema resolution output
 
@@ -92,7 +92,7 @@ Hint: pass --timestamp created_at
 User Explorer embeds all event properties verbatim in the output HTML. The tool prints a reminder on every run:
 
 ```
-Note: output contains all event properties. Inspect before sharing.
+Note: output contains all event properties verbatim. Use --redact COL to hide sensitive columns before sharing.
 ```
 
-`--redact COL [COL ...]` (v1.1) replaces named property values with `<redacted>` before serialization.
+`--redact COL [COL ...]` replaces named column values with `<redacted>` before serialization.

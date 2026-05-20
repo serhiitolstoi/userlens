@@ -13,6 +13,7 @@ from user_explorer.mcp_server import (
     find_users_by_event_impl,
     get_event_taxonomy_impl,
     list_users_impl,
+    quick_report_impl,
     summarize_cohort_impl,
 )
 
@@ -274,3 +275,47 @@ def test_server_state_blobs_populated(tmp_path: Path) -> None:
     state.check_and_rebuild()
     assert len(state.blobs) == 3
     assert "schema" in state.meta
+
+
+# ---------------------------------------------------------------------------
+# test_quick_report (flagship one-shot tool)
+# ---------------------------------------------------------------------------
+
+def test_quick_report_impl(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Don't actually launch a browser during tests.
+    import user_explorer.mcp_server as mod
+    monkeypatch.setattr(mod, "_open_in_browser", lambda _p: False)
+
+    blobs, meta = _load_tiny()
+    out = tmp_path / "report.html"
+    result = quick_report_impl(blobs, meta, output=str(out))
+
+    assert result["output"] == str(out.resolve())
+    assert out.exists()
+    assert result["users_included"] == 3
+    assert result["total_events"] == 20
+    assert result["size_bytes"] > 0
+    assert len(result["top_users"]) > 0
+    assert all({"user_id", "events", "sessions"} <= set(u) for u in result["top_users"])
+    assert len(result["top_events"]) > 0
+    assert all({"name", "count"} <= set(e) for e in result["top_events"])
+
+
+def test_quick_report_impl_respects_filters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import user_explorer.mcp_server as mod
+    monkeypatch.setattr(mod, "_open_in_browser", lambda _p: False)
+
+    blobs, meta = _load_with_attrs()
+    out = tmp_path / "filtered.html"
+    # Filter to a cohort; result must include only matching users.
+    result = quick_report_impl(blobs, meta, output=str(out), filters='{"user_country": "PL"}')
+
+    assert "error" not in result
+    assert result["users_included"] >= 1
+    assert result["users_included"] <= len(blobs)
+
+
+def test_quick_report_impl_no_match_returns_error() -> None:
+    blobs, meta = _load_with_attrs()
+    result = quick_report_impl(blobs, meta, filters='{"user_country": "ZZ"}')
+    assert "error" in result
