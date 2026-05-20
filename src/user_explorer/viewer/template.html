@@ -532,49 +532,97 @@ details[open] .sess-arrow{transform:rotate(90deg)}
 .sx-summary b{color:var(--text);font-weight:600}
 .sx-empty{color:var(--text-3);padding:24px;text-align:center;font-size:12px}
 
-/* ── Flow tab — single panel of session paths ── */
-.fp-head{
-  font-size:11px;color:var(--text-2);font-family:var(--mono);
-  margin-bottom:10px;
+/* ── Flow tab — Pathfinder (Sankey-style next-step explorer) ── */
+.fp-empty{color:var(--text-3);padding:20px;text-align:center;font-size:12px}
+
+/* Behavioral summary strip */
+.fp-summary{
+  display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;
 }
-.fp-head b{color:var(--text);font-weight:600}
-.fp-panel{
+.fp-stat{
   background:var(--card);border:1px solid var(--border-soft);
-  border-radius:8px;padding:6px 0;box-shadow:var(--shadow);
+  border-radius:8px;padding:7px 12px;flex:1;min-width:140px;
 }
-.fp-row{
-  border-bottom:1px solid var(--border-soft);
+.fp-stat-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:4px}
+.fp-stat-val{font-size:11px;color:var(--text);font-family:var(--mono)}
+.fp-stat-val b{color:var(--accent-hi);font-weight:600}
+.fp-stat-sub{font-size:10px;color:var(--text-3);font-family:var(--mono);margin-top:2px}
+
+/* Pathfinder explorer */
+.fp-explorer-wrap{position:relative}
+.fp-explorer-head{
+  display:flex;align-items:center;gap:10px;margin-bottom:8px;
+}
+.fp-explorer-label{font-size:11px;color:var(--text-2);flex:1}
+.fp-explorer-label b{color:var(--text);font-weight:600}
+.fp-reset-btn{
+  font-size:10px;padding:3px 9px;border-radius:5px;
+  background:var(--card-2);border:1px solid var(--border);
+  color:var(--text-3);cursor:pointer;font-family:inherit;
   transition:.12s ease;
 }
-.fp-row:last-child{border-bottom:none}
-.fp-row-head{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 14px;cursor:pointer;
-  transition:.1s ease;
+.fp-reset-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-bg)}
+.fp-explorer{
+  display:flex;gap:0;overflow-x:auto;padding-bottom:4px;
 }
-.fp-row-head:hover{background:var(--card-2)}
-.fp-row.open .fp-row-head{background:var(--card-2);border-bottom:1px solid var(--border-soft)}
-.fp-chain{display:flex;align-items:center;gap:4px;flex:1;min-width:0;flex-wrap:wrap}
-.fp-pill{
-  font-size:10px;padding:2px 7px;border-radius:4px;
-  font-family:var(--mono);white-space:nowrap;
-  border:1px solid transparent;
+/* Column */
+.fp-col{
+  display:flex;flex-direction:column;gap:4px;
+  min-width:160px;max-width:220px;flex-shrink:0;
 }
-.fp-arrow{color:var(--text-3);font-size:10px}
-.fp-meta{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
-.fp-cnt{font-size:11px;color:var(--text-2);font-family:var(--mono);flex-shrink:0;text-align:right;white-space:nowrap}
-.fp-cnt b{color:var(--text);font-weight:600}
-.fp-len{font-size:10px;color:var(--text-3);font-family:var(--mono);flex-shrink:0;white-space:nowrap;min-width:60px;text-align:right}
-.fp-bar{height:4px;background:var(--border);border-radius:2px;width:80px;flex-shrink:0}
-.fp-bar-fg{height:100%;background:var(--accent);border-radius:2px;min-width:2px}
-.fp-more-pill{
-  font-size:10px;padding:2px 8px;border-radius:4px;
-  background:var(--card-2);color:var(--text-3);
-  border:1px dashed var(--border);font-family:var(--mono);
-  white-space:nowrap;font-style:italic;
+.fp-col-head{
+  font-size:10px;color:var(--text-3);text-transform:uppercase;
+  letter-spacing:.6px;font-weight:600;padding:0 2px 4px;
+  border-bottom:1px solid var(--border-soft);margin-bottom:2px;
 }
-.fp-toggle{font-size:9px;color:var(--text-3);transition:transform .15s ease;width:10px;flex-shrink:0}
-.fp-row.open .fp-toggle{transform:rotate(90deg);color:var(--accent)}
+/* Node */
+.fp-node{
+  position:relative;border-radius:6px;
+  padding:7px 10px 7px 10px;cursor:pointer;
+  transition:.12s ease;
+  background:var(--card);border:1px solid var(--border-soft);
+}
+.fp-node:hover,.fp-node.active{
+  border-color:var(--accent);background:var(--accent-bg);
+}
+.fp-node.active .fp-node-name{color:var(--accent-hi)}
+.fp-node.anchor{
+  border-color:var(--accent);background:var(--accent-bg);
+  box-shadow:0 0 0 2px var(--accent-bg);
+}
+.fp-node.anchor .fp-node-name{color:var(--accent-hi);font-weight:600}
+.fp-node-name{
+  font-size:11px;color:var(--text);font-family:var(--mono);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-bottom:4px;
+}
+.fp-node-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-bottom:4px}
+.fp-node-bar{height:100%;background:var(--accent);border-radius:2px;min-width:2px;opacity:.7}
+.fp-node.active .fp-node-bar,.fp-node.anchor .fp-node-bar{opacity:1}
+.fp-node-meta{display:flex;justify-content:space-between;align-items:center}
+.fp-node-cnt{font-size:10px;color:var(--text-2);font-family:var(--mono)}
+.fp-node-cnt b{color:var(--text);font-weight:600}
+.fp-node-pct{font-size:10px;color:var(--text-3);font-family:var(--mono)}
+.fp-node-fam{
+  position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;border-radius:0 2px 2px 0;
+  min-height:12px;
+}
+/* Connector arrow between columns */
+.fp-connector{
+  display:flex;align-items:center;justify-content:center;
+  width:24px;flex-shrink:0;
+}
+.fp-connector svg{opacity:.3}
+/* Expand more */
+.fp-more-node{
+  border-radius:6px;padding:6px 10px;
+  background:transparent;border:1px dashed var(--border);
+  font-size:10px;color:var(--text-3);font-family:var(--mono);
+  text-align:center;cursor:pointer;transition:.12s ease;
+}
+.fp-more-node:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+/* mini session examples drawer */
 .fp-drawer{
   padding:6px 14px 10px;background:var(--card-2);
   display:none;
@@ -601,7 +649,12 @@ details[open] .sess-arrow{transform:rotate(90deg)}
   background:none;border:none;cursor:pointer;
   font-family:inherit;text-decoration:underline;text-underline-offset:2px;
 }
-.fp-empty{color:var(--text-3);padding:20px;text-align:center;font-size:12px}
+/* diversity / coverage note */
+.fp-note{
+  font-size:11px;color:var(--text-3);margin-top:10px;padding-top:8px;
+  border-top:1px solid var(--border-soft);
+}
+.fp-note b{color:var(--text-2)}
 </style>
 </head>
 <body>
@@ -1567,125 +1620,208 @@ function renderSessions(u){
   });
 }
 
-/* ── Flow tab — top session paths ── */
+/* ── Flow tab — Pathfinder (stepwise next-event explorer + behavioral summary) ── */
 function renderFlow(u){
   const container=document.getElementById('pane-fl');
   const v=getFilteredView(u);
   if(!v.sessions.length){container.innerHTML='<div class="fp-empty">No sessions in range</div>';return;}
 
-  // Compute a "shape" for each session by collapsing consecutive duplicates of the same
-  // event, then compressing long shapes to head + ⋯ + tail. Sessions whose dedup'd shapes
-  // match group together — this captures the high-level flow even when one user repeats
-  // a step (e.g. message_sent) many times while another does it once.
-  const SIG_SHORT_MAX=5, SIG_HEAD=3, SIG_TAIL=2;
-  function shapeOf(evs){
-    // Keep each event name only the FIRST time it appears in the session — this turns
-    // a 60-event msg/resp ping-pong into the 2-element shape [msg, resp], and groups
-    // sessions by the high-level flow of events they touch rather than exact sequence.
-    const out=[]; const seen=new Set();
-    for(const e of evs){
-      const n=e[1];
-      if(!seen.has(n)){ out.push(n); seen.add(n); }
-    }
-    return out;
-  }
-  function signatureOf(evs){
-    const shape=shapeOf(evs);
-    if(shape.length<=SIG_SHORT_MAX){
-      return {names:shape, compressed:false, hiddenCount:0, shapeLen:shape.length, rawLen:evs.length};
-    }
-    const head=shape.slice(0,SIG_HEAD);
-    const tail=shape.slice(-SIG_TAIL);
-    const hidden=shape.length-SIG_HEAD-SIG_TAIL;
-    return {names:[...head, null, ...tail], compressed:true, hiddenCount:hidden, shapeLen:shape.length, rawLen:evs.length};
-  }
-  function sigKey(sig){
-    // Group by head+tail shape only; middle-step count is shown as a range, not part of the key.
-    return sig.names.map(n=>n===null?'__MORE__':n).join('\x1f');
-  }
-
-  const groups={}; // key → {sig, count, sessions, min/max for hidden/raw}
-  v.sessions.forEach((s,idx)=>{
-    if(!s[2].length) return;
-    const sig=signatureOf(s[2]);
-    const k=sigKey(sig);
-    if(!groups[k]){
-      groups[k]={sig,count:0,sessions:[],minHidden:sig.hiddenCount,maxHidden:sig.hiddenCount,minLen:sig.rawLen,maxLen:sig.rawLen};
-    }
-    groups[k].count++;
-    groups[k].sessions.push(idx);
-    groups[k].minHidden=Math.min(groups[k].minHidden,sig.hiddenCount);
-    groups[k].maxHidden=Math.max(groups[k].maxHidden,sig.hiddenCount);
-    groups[k].minLen=Math.min(groups[k].minLen,sig.rawLen);
-    groups[k].maxLen=Math.max(groups[k].maxLen,sig.rawLen);
-  });
-  const ranked=Object.values(groups).sort((a,b)=>b.count-a.count);
-  if(!ranked.length){container.innerHTML='<div class="fp-empty">No session paths to analyze</div>';return;}
-
-  const top=ranked.slice(0,12);
+  // ── 1. Build transition map from raw event sequences ──────────────────────
+  // trans[from][to] = count; also track entry (first event) and exit (last event).
+  const trans={};  // {from: {to: count}}
+  const entryCount={};  // first event of each session
+  const exitCount={};   // last event of each session
+  const loopCount={};   // consecutive repeat (A→A)
   const totalSess=v.sessions.length;
-  const maxCnt=top[0].count;
-  const topPct=Math.round(top[0].count/totalSess*100);
 
-  function pill(name){
-    const fam=famOf(name);
-    return `<span class="fp-pill fam-${CSS.escape(fam)}">${esc(name)}</span>`;
-  }
-  function morePill(label){return `<span class="fp-more-pill">⋯ ${label}</span>`;}
-  function chainHtml(g){
-    const parts=[];
-    const moreLabel=g.minHidden===g.maxHidden?`+${g.minHidden} step${g.minHidden!==1?'s':''}`:`+${g.minHidden}–${g.maxHidden} steps`;
-    g.sig.names.forEach((n,i)=>{
-      if(i>0) parts.push('<span class="fp-arrow">→</span>');
-      parts.push(n===null?morePill(moreLabel):pill(n));
-    });
-    return parts.join('');
-  }
+  v.sessions.forEach(([,, evs])=>{
+    if(!evs.length) return;
+    const entry=evs[0][1];
+    const exit=evs[evs.length-1][1];
+    entryCount[entry]=(entryCount[entry]||0)+1;
+    exitCount[exit]=(exitCount[exit]||0)+1;
+    for(let i=0;i<evs.length-1;i++){
+      const from=evs[i][1], to=evs[i+1][1];
+      if(!trans[from]) trans[from]={};
+      trans[from][to]=(trans[from][to]||0)+1;
+      if(from===to) loopCount[from]=(loopCount[from]||0)+1;
+    }
+  });
 
-  const rowsHtml=top.map((g,i)=>{
-    const pct=Math.round(g.count/totalSess*100);
-    const lenLabel=g.minLen===g.maxLen?`${g.minLen} events`:`${g.minLen}–${g.maxLen} events`;
-    return `<div class="fp-row" data-idx="${i}">
-      <div class="fp-row-head">
-        <span class="fp-toggle">▶</span>
-        <div class="fp-chain">${chainHtml(g)}</div>
-        <div class="fp-meta">
-          <div class="fp-bar"><div class="fp-bar-fg" style="width:${Math.round(g.count/maxCnt*100)}%"></div></div>
-          <span class="fp-cnt"><b>${g.count.toLocaleString()}</b> session${g.count!==1?'s':''} · ${pct}%</span>
-          <span class="fp-len">${lenLabel}</span>
-        </div>
-      </div>
-      <div class="fp-drawer"></div>
-    </div>`;
-  }).join('');
+  // ── 2. Behavioral summary stats ───────────────────────────────────────────
+  const topEntries=Object.entries(entryCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topExits=Object.entries(exitCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
 
-  container.innerHTML=`<div class="fp-head"><b>${ranked.length.toLocaleString()}</b> distinct path${ranked.length!==1?'s':''} · top path covers <b>${topPct}%</b> of sessions · ${totalSess.toLocaleString()} session${totalSess!==1?'s':''} analyzed</div><div class="fp-panel">${rowsHtml}</div>`;
-
-  container.querySelectorAll('.fp-row').forEach(row=>{
-    const idx=+row.dataset.idx;
-    const g=top[idx];
-    row.querySelector('.fp-row-head').addEventListener('click',()=>{
-      const wasOpen=row.classList.toggle('open');
-      const drawer=row.querySelector('.fp-drawer');
-      if(wasOpen&&!drawer.dataset.built){
-        drawer.dataset.built='1';
-        const matching=g.sessions.slice(0,3).map(i=>v.sessions[i]);
-        const moreNote=`<div class="fp-drawer-h">showing ${matching.length} of ${g.count} matching session${g.count!==1?'s':''}</div>`;
-        const examples=matching.map(([sid,ts,evs])=>{
-          const fmt=fmtTs(ts);
-          const evHtml=evs.map(ev=>renderEventRow(ev,sid,0)).join('');
-          return `<div class="fp-mini-sess">
-            <div class="fp-mini-head"><b>${esc(fmt.date)}</b> <span style="color:var(--text-3)">${esc(fmt.time)}</span> · <span style="color:var(--text-3)">${evs.length} events${sessDur(evs)?' · '+sessDur(evs):''}</span><button class="fp-mini-jump" data-sid="${esc(sid)}">open in timeline →</button></div>
-            ${evHtml}
-          </div>`;
-        }).join('');
-        drawer.innerHTML=moreNote+examples;
-        drawer.querySelectorAll('.fp-mini-jump').forEach(b=>b.addEventListener('click',e=>{
-          e.stopPropagation();jumpToSession(b.dataset.sid);
-        }));
-      }
+  // top transition A→B (excluding self-loops)
+  let topFrom='',topTo='',topTrCnt=0;
+  Object.entries(trans).forEach(([from,tos])=>{
+    Object.entries(tos).forEach(([to,cnt])=>{
+      if(from!==to && cnt>topTrCnt){topFrom=from;topTo=to;topTrCnt=cnt;}
     });
   });
+
+  // dominant loop
+  const topLoop=Object.entries(loopCount).sort((a,b)=>b[1]-a[1])[0]||null;
+
+  // path diversity: unique ordered event-name sequences / total sessions
+  const pathSigs=new Set();
+  v.sessions.forEach(([,,evs])=>{
+    if(evs.length) pathSigs.add(evs.map(e=>e[1]).join('\x1f'));
+  });
+  const diversity=totalSess>1?Math.round(pathSigs.size/totalSess*100):100;
+
+  function statHtml(label,val,sub=''){
+    return `<div class="fp-stat"><div class="fp-stat-label">${label}</div><div class="fp-stat-val">${val}</div>${sub?`<div class="fp-stat-sub">${sub}</div>`:''}</div>`;
+  }
+  function evSpan(name){
+    const fam=famOf(name);
+    return `<span class="fp-pill fam-${CSS.escape(fam)}" style="font-size:10px;padding:1px 6px;border-radius:3px;border:1px solid transparent">${esc(name)}</span>`;
+  }
+
+  const entryVal=topEntries.map(([n,c])=>`${evSpan(n)} <span style="color:var(--text-3)">${Math.round(c/totalSess*100)}%</span>`).join(' · ');
+  const exitVal=topExits.map(([n,c])=>`${evSpan(n)} <span style="color:var(--text-3)">${Math.round(c/totalSess*100)}%</span>`).join(' · ');
+  const trVal=topTrCnt>0
+    ? `${evSpan(topFrom)} <span style="color:var(--text-3)">→</span> ${evSpan(topTo)} <span style="color:var(--text-3)">${topTrCnt}×</span>`
+    : '<span style="color:var(--text-3)">—</span>';
+  const loopVal=topLoop
+    ? `${evSpan(topLoop[0])} <span style="color:var(--text-3)">${topLoop[1]}×</span>`
+    : '<span style="color:var(--text-3)">none</span>';
+  const divClass=diversity>=80?'style="color:var(--text-3)"':diversity>=50?'':'style="color:var(--accent-hi)"';
+  const divVal=`<b ${divClass}>${diversity}%</b>`;
+  const divSub=diversity>=80?'highly diverse — unique paths':'moderate pattern overlap';
+
+  const summaryHtml=`<div class="fp-summary">
+    ${statHtml('Entry events',entryVal,'')}
+    ${statHtml('Exit events',exitVal,'')}
+    ${statHtml('Top transition',trVal,'')}
+    ${statHtml('Dominant loop',loopVal,topLoop?`repeats within a session`:'')}
+    ${statHtml('Path diversity',divVal,divSub)}
+  </div>`;
+
+  // ── 3. Pathfinder explorer ────────────────────────────────────────────────
+  // State: anchor = root event name (null = show session-starts), depth = columns shown
+  let anchor=null; // null means "session entry" view
+  const MAX_NODES=8;  // max nodes per column
+  const MAX_COLS=4;   // max drill depth rendered
+
+  // For a given "from" context, returns sorted [{name,count}]
+  function nextsFrom(fromName){
+    const tos=trans[fromName]||{};
+    return Object.entries(tos)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,MAX_NODES)
+      .map(([name,count])=>({name,count}));
+  }
+  // For a given root, get the entry counts (used when anchor=null)
+  function entryNodes(){
+    return Object.entries(entryCount)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,MAX_NODES)
+      .map(([name,count])=>({name,count}));
+  }
+
+  function buildColumns(rootName){
+    // Returns array of columns; each column = {label, nodes:[{name,count,pct}], fromCount}
+    const cols=[];
+    // Col 0: root column
+    let col0nodes, col0from;
+    if(rootName===null){
+      col0nodes=entryNodes();
+      col0from=totalSess;
+    } else {
+      col0nodes=nextsFrom(rootName);
+      col0from=Object.values(trans[rootName]||{}).reduce((a,b)=>a+b,0);
+    }
+    if(!col0nodes.length) return cols;
+    cols.push({label:rootName===null?'Session start':'After anchor',nodes:col0nodes,fromCount:col0from});
+
+    // Drill up to MAX_COLS-1 more levels from the top node at each level
+    let currentTop=col0nodes[0].name;
+    for(let d=1;d<MAX_COLS;d++){
+      const nexts=nextsFrom(currentTop);
+      if(!nexts.length) break;
+      const fromCnt=Object.values(trans[currentTop]||{}).reduce((a,b)=>a+b,0);
+      cols.push({label:`After ${currentTop}`,nodes:nexts,fromCount:fromCnt});
+      currentTop=nexts[0].name;
+    }
+    return cols;
+  }
+
+  function renderExplorer(){
+    const cols=buildColumns(anchor);
+    if(!cols.length){
+      return `<div class="fp-empty" style="padding:40px;text-align:center">No outgoing transitions from this event</div>`;
+    }
+
+    const colsHtml=cols.map((col,ci)=>{
+      const maxCnt=col.nodes[0].count;
+      const nodesHtml=col.nodes.map(node=>{
+        const pct=col.fromCount>0?Math.round(node.count/col.fromCount*100):0;
+        const barW=Math.round(node.count/maxCnt*100);
+        const fam=famOf(node.name);
+        return `<div class="fp-node${node.name===anchor?' anchor':''}" data-name="${esc(node.name)}" data-col="${ci}" title="Click to explore paths from ${esc(node.name)}">
+          <div class="fp-node-fam" style="background:var(--fam-${CSS.escape(fam)}-fg,var(--accent))"></div>
+          <div class="fp-node-name" style="padding-left:7px">${esc(node.name)}</div>
+          <div class="fp-node-bar-wrap"><div class="fp-node-bar" style="width:${barW}%"></div></div>
+          <div class="fp-node-meta">
+            <span class="fp-node-cnt"><b>${node.count.toLocaleString()}</b>×</span>
+            <span class="fp-node-pct">${pct}%</span>
+          </div>
+        </div>`;
+      }).join('');
+      const connector=ci>0?`<div class="fp-connector"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 8h8M8 4l4 4-4 4" stroke="var(--text-3)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`:'';
+      return `${connector}<div class="fp-col"><div class="fp-col-head">${esc(col.label)}</div>${nodesHtml}</div>`;
+    }).join('');
+
+    // anchor breadcrumb label
+    const anchorLabel=anchor===null
+      ? `Showing <b>${Math.min(cols[0].nodes.length,MAX_NODES)}</b> most common session-start events`
+      : `Anchored on <b>${esc(anchor)}</b> → exploring ${cols.length} step${cols.length!==1?'s':''}`;
+
+    return `<div class="fp-explorer-head">
+      <span class="fp-explorer-label">${anchorLabel}</span>
+      ${anchor!==null?`<button class="fp-reset-btn" id="fp-reset">↺ Reset</button>`:''}
+    </div>
+    <div class="fp-explorer" id="fp-explorer-cols">${colsHtml}</div>`;
+  }
+
+  function buildHtml(){
+    const explorerHtml=renderExplorer();
+    const totalTrans=Object.values(trans).reduce((s,t)=>s+Object.values(t).reduce((a,b)=>a+b,0),0);
+    const uniqueEvents=new Set([...Object.keys(trans),...Object.values(trans).flatMap(t=>Object.keys(t))]);
+    const noteHtml=`<div class="fp-note"><b>${totalSess}</b> sessions · <b>${totalTrans.toLocaleString()}</b> transitions · <b>${uniqueEvents.size}</b> distinct events · click any node to re-anchor</div>`;
+    return summaryHtml+`<div class="fp-explorer-wrap" id="fp-explorer-wrap">`+explorerHtml+`</div>`+noteHtml;
+  }
+
+  container.innerHTML=buildHtml();
+
+  function attachListeners(){
+    // Reset button
+    const resetBtn=container.querySelector('#fp-reset');
+    if(resetBtn) resetBtn.addEventListener('click',()=>{
+      anchor=null;
+      redraw();
+    });
+    // Node click → re-anchor
+    container.querySelectorAll('.fp-node').forEach(node=>{
+      node.addEventListener('click',()=>{
+        const name=node.dataset.name;
+        if(anchor===name){ anchor=null; }
+        else { anchor=name; }
+        redraw();
+      });
+    });
+  }
+
+  function redraw(){
+    const wrap=container.querySelector('#fp-explorer-wrap');
+    if(wrap){
+      wrap.innerHTML=renderExplorer();
+      attachListeners();
+    }
+  }
+
+  attachListeners();
 }
 
 /* ── Jump helpers ── */

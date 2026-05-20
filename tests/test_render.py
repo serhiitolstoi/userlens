@@ -94,23 +94,25 @@ def test_render_heatmap_highlight_filter_present(tmp_path: Path) -> None:
     assert "hl-ev" in html, "Timeline event rows must support a highlight CSS class"
 
 
-def test_render_flow_uses_session_paths_not_2grams(tmp_path: Path) -> None:
-    """Flow tab must show full session-path signatures, not 2-gram transitions.
+def test_render_flow_pathfinder_structure(tmp_path: Path) -> None:
+    """Flow tab must use the Pathfinder (transition-based) explorer, not path signatures.
 
-    Regression guard: the old implementation grouped by consecutive event
-    pairs (a→b), which gave a misleading view. The new implementation groups
-    sessions by their head+tail signature so similar full flows aggregate.
+    Regression guard: the old implementation grouped sessions by head+tail
+    signature. The new implementation builds a transition map (A→B counts)
+    and renders a stepwise next-event explorer with a behavioral summary strip.
     """
     result = run(PipelineOptions(events_path=FIXTURES / "tiny.csv"))
     out = tmp_path / "out.html"
     render(result.blobs, result.meta, out, open_browser=False)
 
     html = out.read_text(encoding="utf-8")
-    # New Flow rendering hallmarks
-    assert "signatureOf" in html, "Flow must derive a per-session signature"
-    assert "distinct path" in html, "Flow header must reference 'distinct paths'"
-    # The header tracks the analyzed-session count — matches both "session analyzed"
-    # and "sessions analyzed" depending on plural.
-    assert "} analyzed" in html, "Flow header must include sessions-analyzed count"
-    # Old 2-gram-only string should not be the primary grouping any more.
-    assert "unique transition" not in html, "Flow must not regress to 2-gram transitions"
+    # Pathfinder explorer hallmarks
+    assert "fp-explorer" in html, "Flow must render the Pathfinder explorer"
+    assert "fp-summary" in html, "Flow must include behavioral summary strip"
+    assert "Entry events" in html, "Summary strip must show entry events"
+    assert "Top transition" in html, "Summary strip must show top transition"
+    assert "Path diversity" in html, "Summary strip must show path diversity score"
+    assert "renderFlow" in html, "renderFlow function must be present"
+    # Old path-signature strings must not appear
+    assert "signatureOf" not in html, "Old signature-based approach must be removed"
+    assert "distinct path" not in html, "Old 'distinct paths' header must be removed"
