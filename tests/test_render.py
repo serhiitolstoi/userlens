@@ -116,3 +116,28 @@ def test_render_flow_pathfinder_structure(tmp_path: Path) -> None:
     # Old path-signature strings must not appear
     assert "signatureOf" not in html, "Old signature-based approach must be removed"
     assert "distinct path" not in html, "Old 'distinct paths' header must be removed"
+
+
+def test_render_overview_tab_and_features(tmp_path: Path) -> None:
+    """Overview tab replaces 'Top events' as the default landing tab.
+
+    Guards: tab is renamed/reordered (Overview first, Timeline last), the
+    composition bar + cohort indexing render, the Overview is wired to the
+    cross-tab highlight, and the old 'Top events'/renderTopEvents are gone.
+    """
+    result = run(PipelineOptions(events_path=FIXTURES / "tiny.csv"))
+    out = tmp_path / "out.html"
+    render(result.blobs, result.meta, out, open_browser=False)
+
+    html = out.read_text(encoding="utf-8")
+    # Tab rename + default landing tab is Overview (pane-ev gets the 'on' class)
+    assert '<button class="tab on" data-pane="pane-ev">Overview</button>' in html
+    assert 'switchTab(\'pane-ev\')' in html, "selectUser must default to the Overview tab"
+    # Enriched Overview hallmarks
+    assert "renderOverview" in html, "renderOverview function must be present"
+    assert "Activity composition" in html, "Overview must show the composition bar"
+    assert "cohortShares" in html, "Overview must compute a cohort baseline"
+    assert "vs avg user" in html, "Overview must show the cohort-index column"
+    assert "ov-row" in html, "Overview rows must be clickable for cross-tab solo"
+    # Old naming must be gone
+    assert "renderTopEvents" not in html, "renderTopEvents must be renamed to renderOverview"

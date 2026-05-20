@@ -472,6 +472,33 @@ details[open] .sess-arrow{transform:rotate(90deg)}
 .barnum{font-size:11px;color:var(--text-2);font-family:var(--mono);min-width:24px}
 .barpct{font-size:10px;color:var(--text-3);font-family:var(--mono);min-width:32px;text-align:right}
 
+/* ── Overview: composition bar + cohort index + interconnection ── */
+.ov-comp-wrap{margin-bottom:14px}
+.ov-sec-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);margin-bottom:7px}
+.ov-comp{display:flex;height:26px;border-radius:6px;overflow:hidden;background:var(--border);box-shadow:var(--shadow)}
+.ov-seg{min-width:2px;transition:opacity .12s ease}
+.ov-seg:hover{opacity:.82}
+.ov-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:9px}
+.ov-leg{font-size:11px;color:var(--text-2);display:flex;align-items:center;gap:5px;font-family:var(--mono)}
+.ov-leg b{color:var(--text);font-weight:600}
+.ov-leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.ov-hl-note{font-size:11px;color:var(--text-2);background:var(--accent-bg);border:1px solid var(--accent);border-radius:6px;padding:6px 11px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.ov-hl-note b{color:var(--accent-hi);font-family:var(--mono);font-weight:600}
+.ov-clear{margin-left:auto;font-size:10px;color:var(--accent);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-family:inherit}
+.ov-row{cursor:pointer}
+.top-tbl tr.hl-row td{background:var(--accent-bg)!important}
+.top-tbl tr.hl-row td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+/* cohort index: diverging bar around a center baseline */
+.ov-idx{white-space:nowrap}
+.ov-idx-bar{position:relative;display:inline-block;width:84px;height:10px;vertical-align:middle}
+.ov-idx-center{position:absolute;left:50%;top:0;width:1px;height:100%;background:var(--border);transform:translateX(-50%)}
+.ov-idx-left{position:absolute;right:50%;top:3px;height:4px;background:var(--text-3);opacity:.55;border-radius:2px 0 0 2px}
+.ov-idx-right{position:absolute;left:50%;top:3px;height:4px;background:var(--accent);border-radius:0 2px 2px 0}
+.ov-idx-lbl{font-size:10px;font-family:var(--mono);margin-left:8px}
+.ov-idx-hi .ov-idx-lbl{color:var(--accent-hi);font-weight:600}
+.ov-idx-lo .ov-idx-lbl{color:var(--text-3)}
+.ov-idx-mid .ov-idx-lbl{color:var(--text-2)}
+
 /* ── Sessions tab — DoW × Hour grid + trend + histogram ── */
 .sx-grid{display:grid;grid-template-columns:1fr;gap:12px}
 .sx-card{
@@ -748,15 +775,15 @@ details[open] .sess-arrow{transform:rotate(90deg)}
     </div>
 
     <div class="tabs">
-      <button class="tab on" data-pane="pane-tl">Timeline</button>
+      <button class="tab on" data-pane="pane-ev">Overview</button>
       <button class="tab" data-pane="pane-rb">Sessions</button>
       <button class="tab" data-pane="pane-fl">Flow</button>
-      <button class="tab" data-pane="pane-ev">Top events</button>
+      <button class="tab" data-pane="pane-tl">Timeline</button>
     </div>
-    <div id="pane-tl"></div>
+    <div id="pane-ev"></div>
     <div id="pane-rb" class="hidden"></div>
     <div id="pane-fl" class="hidden"></div>
-    <div id="pane-ev" class="hidden"></div>
+    <div id="pane-tl" class="hidden"></div>
   </div>
 </main>
 </div>
@@ -1045,7 +1072,7 @@ function selectUser(uid){
   else{document.getElementById('range-from').value=''; document.getElementById('range-to').value='';}
   syncRangeButtons();
   rerenderAll(u);
-  switchTab('pane-tl');
+  switchTab('pane-ev');
   detailEl.parentElement.scrollTop=0;
 }
 
@@ -1053,7 +1080,7 @@ function rerenderAll(u){
   renderCard(u);
   renderHeatmap(u);
   renderTimeline(u);
-  renderTopEvents(u);
+  renderOverview(u);
   renderSessions(u);
   renderFlow(u);
   renderRangeSummary(u);
@@ -1419,21 +1446,106 @@ function applyTlSearch(){
 }
 
 /* ── top events ── */
-function renderTopEvents(u){
+/* Cohort baseline (memoized): how often each event occurs across ALL users.
+   Used to index a single user's behavior against the typical user. */
+let _cohort=null;
+function cohortShares(){
+  if(_cohort) return _cohort;
+  const tot={}; let grand=0;
+  DATA.forEach(b=>(b.s||[]).forEach(([,,evs])=>evs.forEach(([,n])=>{tot[n]=(tot[n]||0)+1;grand++;})));
+  _cohort={tot,grand:grand||1,nUsers:DATA.length||1};
+  return _cohort;
+}
+
+function renderOverview(u){
   const v=getFilteredView(u);
   const counts={};
   v.sessions.forEach(([,,evs])=>evs.forEach(([,n])=>counts[n]=(counts[n]||0)+1));
+  // Keep a soloed event visible even if it has 0 occurrences in the current range.
+  if(highlightEvent && !(highlightEvent in counts)) counts[highlightEvent]=0;
   const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const pane=document.getElementById('pane-ev');
+  if(!rows.length){pane.innerHTML='<div class="sx-empty">No events in range</div>';return;}
   const maxC=rows[0]?.[1]||1, totalE=rows.reduce((s,[,c])=>s+c,0)||1;
-  document.getElementById('pane-ev').innerHTML=`<table class="top-tbl">
-    <thead><tr><th>Event</th><th>Feature</th><th>Count</th><th>%</th></tr></thead>
-    <tbody>${rows.map(([n,cnt])=>{
-      const fam=famOf(n), pct=Math.round(cnt/totalE*100);
-      return `<tr><td><code>${esc(n)}</code></td>
-        <td><span class="fampill fam-${CSS.escape(fam)}">${esc(fam)}</span></td>
-        <td><div class="barwrap"><div class="barbg"><div class="barfg" style="width:${Math.round(cnt/maxC*100)}%"></div></div><span class="barnum">${cnt}</span></div></td>
-        <td><span class="barpct">${pct}%</span></td></tr>`;
-    }).join('')}</tbody></table>`;
+
+  // ── Activity composition (family rollup) ──
+  const famCounts={};
+  rows.forEach(([n,c])=>{const f=famOf(n);famCounts[f]=(famCounts[f]||0)+c;});
+  const famRows=Object.entries(famCounts).sort((a,b)=>b[1]-a[1]);
+  const famColor=f=>(FEATURES.registry[f]||{}).color||'var(--accent)';
+  const compSegs=famRows.map(([f,c])=>{
+    const pct=Math.round(c/totalE*100);
+    return `<div class="ov-seg" style="flex:${c};background:${famColor(f)}" title="${esc(f)} · ${pct}% · ${c.toLocaleString()} events"></div>`;
+  }).join('');
+  const compLegend=famRows.map(([f,c])=>{
+    const pct=Math.round(c/totalE*100);
+    return `<span class="ov-leg"><span class="ov-leg-dot" style="background:${famColor(f)}"></span>${esc(f)} <b>${pct}%</b></span>`;
+  }).join('');
+
+  // ── Cohort indexing (vs OTHER users — current user excluded from baseline) ──
+  const showCohort=DATA.length>1;
+  const coh=cohortShares();
+  // current user's full all-time contribution, subtracted so we compare against peers
+  const selfTot={}; let selfGrand=0;
+  (u.s||[]).forEach(([,,evs])=>evs.forEach(([,n])=>{selfTot[n]=(selfTot[n]||0)+1;selfGrand++;}));
+  const baseGrand=Math.max(coh.grand-selfGrand,1);
+  function indexCell(n,cnt){
+    if(!showCohort) return '';
+    const userShare=cnt/totalE;
+    const baseCnt=Math.max((coh.tot[n]||0)-(selfTot[n]||0),0);
+    const cohShare=(baseCnt/baseGrand) || (0.25/baseGrand);
+    const idx=cohShare>0?userShare/cohShare:0;
+    const capped=Math.min(idx,4);
+    let label,cls;
+    if(idx>=1.15){cls='ov-idx-hi';label=(idx>=9.95?'9.9+':idx.toFixed(1))+'×';}
+    else if(idx<=0.85){cls='ov-idx-lo';label=idx.toFixed(1)+'×';}
+    else{cls='ov-idx-mid';label='1.0×';}
+    const rightW=idx>1?Math.min((capped-1)/3*50,50):0;
+    const leftW=idx<1?(1-idx)*50:0;
+    return `<td class="ov-idx ${cls}"><span class="ov-idx-bar"><span class="ov-idx-left" style="width:${leftW}%"></span><span class="ov-idx-center"></span><span class="ov-idx-right" style="width:${rightW}%"></span></span><span class="ov-idx-lbl">${label}</span></td>`;
+  }
+  const cohHead=showCohort?'<th title="This user\'s share of each event vs the average user (share-indexed). 1.0× = typical; higher = does it more.">vs avg user</th>':'';
+
+  const rowsHtml=rows.map(([n,cnt])=>{
+    const fam=famOf(n),pct=Math.round(cnt/totalE*100);
+    const isHl=highlightEvent===n;
+    return `<tr class="ov-row${isHl?' hl-row':''}" data-name="${esc(n)}" title="Click to highlight ${esc(n)} across all tabs">
+      <td><code>${esc(n)}</code></td>
+      <td><span class="fampill fam-${CSS.escape(fam)}">${esc(fam)}</span></td>
+      <td><div class="barwrap"><div class="barbg"><div class="barfg" style="width:${Math.round(cnt/maxC*100)}%"></div></div><span class="barnum">${cnt.toLocaleString()}</span></div></td>
+      <td><span class="barpct">${pct}%</span></td>
+      ${indexCell(n,cnt)}
+    </tr>`;
+  }).join('');
+
+  const hlNote=highlightEvent
+    ? `<div class="ov-hl-note">Highlighting <b>${esc(highlightEvent)}</b> across Sessions, Flow &amp; Timeline <button class="ov-clear" id="ov-clear-hl">clear</button></div>`
+    : '';
+
+  pane.innerHTML=`
+    <div class="ov-comp-wrap">
+      <div class="ov-sec-label">Activity composition · ${famRows.length} ${FEATURES.useFeatures?'features':'families'}</div>
+      <div class="ov-comp">${compSegs}</div>
+      <div class="ov-legend">${compLegend}</div>
+    </div>
+    ${hlNote}
+    <table class="top-tbl">
+      <thead><tr><th>Event</th><th>Feature</th><th>Count</th><th>%</th>${cohHead}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+
+  pane.querySelectorAll('.ov-row').forEach(r=>{
+    r.addEventListener('click',()=>{
+      const n=r.dataset.name;
+      highlightEvent=highlightEvent===n?null:n;
+      const uu=DATA.find(x=>x.u===selUid);if(uu)rerenderAll(uu);
+    });
+  });
+  const clr=document.getElementById('ov-clear-hl');
+  if(clr) clr.addEventListener('click',e=>{
+    e.stopPropagation();highlightEvent=null;
+    const uu=DATA.find(x=>x.u===selUid);if(uu)rerenderAll(uu);
+  });
 }
 
 /* ── Sessions tab — DoW×Hour + trend + duration histogram ── */
@@ -1700,7 +1812,10 @@ function renderFlow(u){
 
   // ── 3. Pathfinder explorer ────────────────────────────────────────────────
   // State: anchor = root event name (null = show session-starts), depth = columns shown
-  let anchor=null; // null means "session entry" view
+  // Initialize anchor from the cross-tab highlight: soloing an event in Overview
+  // (or via the event chips) opens Flow already anchored on it. Node-clicks below
+  // still set a local anchor without touching the global highlight.
+  let anchor=(highlightEvent && (trans[highlightEvent]||entryCount[highlightEvent]))?highlightEvent:null;
   const MAX_NODES=8;  // max nodes per column
   const MAX_COLS=4;   // max drill depth rendered
 
